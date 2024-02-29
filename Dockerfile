@@ -1,17 +1,17 @@
-FROM eclipse-temurin:17 AS build
+FROM eclipse-temurin:17-alpine AS build
 
-WORKDIR /ph-ee-connector-template
+WORKDIR /ph-ee-connector-tnm
 
 COPY . .
 
 RUN ./gradlew bootJar
 
-FROM eclipse-temurin:17
+FROM eclipse-temurin:17-alpine
 
 WORKDIR /app
 
-COPY --from=build /ph-ee-connector-template/build/libs/ph-ee-connector-template.jar .
+COPY --from=build /ph-ee-connector-tnm/build/libs/ph-ee-connector-tnm.jar .
 
 EXPOSE 5000
 
-ENTRYPOINT ["java", "-jar", "/app/ph-ee-connector-template.jar"]
+ENTRYPOINT ["java", "-jar", "/app/ph-ee-connector-tnm.jar"]
