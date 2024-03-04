@@ -13,6 +13,8 @@ public class CamelProperties {
     public static final String CONTENT_TYPE_VAL = "application/json";
     public static final String CONTENT_TYPE = "Content-Type";
     public static final String CAMEL_HTTP_RESPONSE_CODE = "CamelHttpResponseCode";
+    public static final String CHANNEL_URL_PROPERTY_IN_HEADER = "${header.channelUrl}";
+    public static final String BRIDGE_ENDPOINT_QUERY_PARAM = "?bridgeEndpoint=true&throwExceptionOnFailure=false";
 
     public static final String BUSINESS_SHORT_CODE = "BusinessShortCode";
     public static final String FINERACT_PRIMARY_IDENTIFIER_NAME = "fineractAccountID";

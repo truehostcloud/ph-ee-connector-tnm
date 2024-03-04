@@ -1,6 +1,8 @@
 package org.mifos.connector.tnm.camel.routes;
 
+import static org.mifos.connector.tnm.camel.config.CamelProperties.BRIDGE_ENDPOINT_QUERY_PARAM;
 import static org.mifos.connector.tnm.camel.config.CamelProperties.CAMEL_HTTP_RESPONSE_CODE;
+import static org.mifos.connector.tnm.camel.config.CamelProperties.CHANNEL_URL_PROPERTY_IN_HEADER;
 import static org.mifos.connector.tnm.camel.config.CamelProperties.CUSTOM_HEADER_FILTER_STRATEGY;
 
 import lombok.RequiredArgsConstructor;
@@ -47,9 +49,9 @@ public class PayBillRoute extends ErrorHandlerRouteBuilder {
         from("direct:account-status").id("account-status-route")
                 .log(LoggingLevel.INFO, "## PayBill Validation Payload request")
                 .setBody(payBillRouteProcessor::buildBodyForAccountStatus)
-                .toD("${header.channelUrl}"
+                .toD(CHANNEL_URL_PROPERTY_IN_HEADER
                         + "/accounts/validate/${header.primaryIdentifier}/${header.primaryIdentifierValue}"
-                        + "?bridgeEndpoint=true&throwExceptionOnFailure=false")
+                        + BRIDGE_ENDPOINT_QUERY_PARAM)
                 .log(LoggingLevel.INFO, "Account Status request sent to channel Paybill validate endpoint")
                 .log(LoggingLevel.DEBUG, "Status: ${header.CamelHttpResponseCode}")
                 .log(LoggingLevel.DEBUG, "Channel Validation response: \n.. ${body}");
@@ -57,8 +59,8 @@ public class PayBillRoute extends ErrorHandlerRouteBuilder {
         from("direct:start-paybill-workflow").id("start-paybill-workflow")
                 .log(LoggingLevel.INFO, "Starting Tnm Workflow for PayBill")
                 .setBody(payBillRouteProcessor::buildBodyForStartPayBillWorkflow)
-                .toD("${header.channelUrl}" + "/channel/gsma/transaction"
-                        + "?bridgeEndpoint=true&throwExceptionOnFailure=false" + "&headerFilterStrategy=#"
+                .toD(CHANNEL_URL_PROPERTY_IN_HEADER + "/channel/gsma/transaction"
+                        + BRIDGE_ENDPOINT_QUERY_PARAM + "&headerFilterStrategy=#"
                         + CUSTOM_HEADER_FILTER_STRATEGY)
                 .log(LoggingLevel.INFO, "Starting GSMA Txn workflow in channel")
                 .to("log:INFO?showBody=true&showHeaders=true");
@@ -72,8 +74,8 @@ public class PayBillRoute extends ErrorHandlerRouteBuilder {
         from("direct:paybill-transaction-status-check-base").id("paybill-transaction-status-check-base")
                 .log(LoggingLevel.INFO, "## PayBill Transaction status request")
                 .process(payBillRouteProcessor::processRequestForTransactionStatusCheck)
-                .toD("${header.channelUrl}" + "/channel/transfer/${header.paybillTransactionId}"
-                        + "?bridgeEndpoint=true&throwExceptionOnFailure=false")
+                .toD(CHANNEL_URL_PROPERTY_IN_HEADER + "/channel/transfer/${header.paybillTransactionId}"
+                        + BRIDGE_ENDPOINT_QUERY_PARAM)
                 .log(LoggingLevel.INFO, "Transaction Status request sent to channel")
                 .log(LoggingLevel.DEBUG, "Status: ${header.CamelHttpResponseCode}")
                 .log(LoggingLevel.DEBUG, "Channel Trx status response: \n\n.. ${body}");
