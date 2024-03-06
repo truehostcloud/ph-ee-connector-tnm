@@ -39,20 +39,26 @@ have been included in the `docker-compose.yml` file. The following components ar
 - Zeebe-ops: Provides APIs for carrying out certain operations on zeebe such as uploading a bpmn
   file
 - Channel-connector: Provides APIs for initiating collection requests
-- Fineract-connector: Acts as Account management system(CLIF) - any other ams connector can be used
+- Fineract-connector: Acts as Account management system for CLIF - any other ams connector can be used
 - Pesa-connector: Acts as an account managment system for Roster
 
 A lot more services can be added to the above based on your needs, but to run the tnm-mw
-connector locally,
-the ones listed above are the required minimum.
+connector locally, the ones listed above are the required minimum.
 Please note that the `docker-compose.yml` file in this repository should NOT be used in a production
 environment.
 
 ## Running with Docker
 
+There are multiple docker compose files in the project:
+- `docker-compose.yml`: This file contains the services required to run the project in a local
+  environment with both Fineract and Roster AMS up.
+- `docker-compose-fineract.yml`: This file contains the services required to run the project in a local
+  environment and spin up only containers needed for Fineract AMS .
+- `docker-compose-roster.yml`: This file contains the services required to run the project in a local
+    environment and spin up only containers needed for Roster AMS .
+
 Some images listed in the `docker-compose.yml` are available on OAF's Azure Container Registry (
-ACR). To be able to pull
-them, certain permissions must be granted to your azure account. Follow the steps below to
+ACR). To be able to pull them, certain permissions must be granted to your azure account. Follow the steps below to
 successfully run the project:
 
 - Ensure [Docker](https://docs.docker.com/get-docker/) is installed on your machine
@@ -81,55 +87,55 @@ successfully run the project:
 
 To initiate a request, follow the steps below:
 
-- Upload the TNM MW Paybill bpmn (found in `src/main/resources/momo_flow_mtnfineract-oaf.bpmn`) through **zeebe-ops**
+- Upload the TNM MW Paybill bpmn (found in `src/main/resources/inbound_tnm_fineract-oaf.bpmn`) through **zeebe-ops**
   by sending a POST request to `http://localhost:5001/zeebe/upload` with the file attached.
 
-- Send a collection request through the **channel-connector** by sending a POST request
-  to `http://localhost:5002/channel/collection` with Platform-TenantId as mw-oaf in the headers,
-  with a sample body as shown below:
+- Send a validation request through the **tnm-connector** by sending a GET request
+  to `http://localhost:5000/paybill/validate/:accountNumber` with msisdn as the client phone number and an optional BusinessShortCode with a value to determine the OAF AMS to use (short code for Roster or Fineract) in the headers,
+  with a sample header as shown below:
+  ```
+  msisdn: 078123457 # The client's phone number
+  BusinessShortCode: 123456 # The business short code
+  getAccountDetails:true # Optional. Default value is true. If set to false, the connector will not fetch the client name
+  
+  ```
+  The response will contain the client's name and account number if the account number is valid.
+  Response sample:
   ```json
   {
-    "payer": [
-        {
-            "key": "MSISDN",
-            "value" :"250788111111"
-        },
-        {
-            "key":"FINERACTACCOUNTID",
-            "value":"24450520"
-        }
-    ],
-    "amount": {
-        "amount": "1",
-        "currency": "EUR"
-    },
-    "transactionType": {
-        "subScenario": "BUYGOODS",
-        "initiator": "PAYEE",
-        "initiatorType": "BUSINESS"
-    }
+    "status": 200,
+    "message": "Account exists",
+    "oafTransactionReference": "a18bcbe0-0e47-4736-8b97-bd1d87332f02",
+    "clientName": "John Doe"
   }
   ```
-    - Check the logs in the **tnm-mw-connector** container to see that a payment has been initiated. For the sandbox,
-      a callback will not be sent back. We can simulate it ourselves to continue the workflow by calling the endpoint
-      `http://localhost:5004/buygoods/callback` with the following body
-      ```json
-      {
-        "financialTransactionId": "1663251507",
-        "externalId": "{TransactionID received from the previous channel connector endpoint}",
-        "amount": "1",
-        "currency": "EUR",
-        "payer": {
-            "partyIdType": "MSISDN",
-            "partyId": "46733123451"
-            },
-        "status":"SUCCESSFUL"
-      }
-      ```
-
-    - Check the logs in the **tnm-mw-connector** connector to see if the confirmation is processed
-    - Check the logs in the **fineract-connector** ams connector to see if the settlement is processed in the ams
-
+  - Send a pay request throught the **TNM connector** by sending a POST request to `http://localhost:5000/paybill/pay` with the following body and headers
+    ```json
+    {
+    "msisdn": "0781234567",
+    "amount": "60",
+    "trans_id": "RKTQDM7W6SAC",
+    "account_number": "10000001",
+    "oafTransactionReference": "a18bcbe0-0e47-4736-8b97-bd1d87332f02"
+    }
+    ```
+    - Headers
+    ```
+    BusinessShortCode: 123456 # The business short code
+    ```
+    Note:
+    - the `oafTransactionReference` is a unique identifier for the transaction and its value is returned during the validation call. It is used to link the pay request with the validation. 
+    - In case the pay request does not contain the `oafTransactionReference` or does not come within the time define in the environment variable ``, the connector will redo the validation check before processing the pay request.
+- Send a confirmation request to get the status of the transaction through the **TNM connector** by sending a GET request to `http://localhost:5000/paybill/confirm/:oafTransactionReference`.
+  The response will contain the status of the transaction.
+  Response sample:
+  ```json
+  {
+    "status": 200,
+    "message": "Payment successful",
+    "receipt_number": "a18bcbe0-0e47-4736-8b97-bd1d87332f02"
+  }
+  ```
 ## Troubleshooting
 
 If an error occurs while carrying out any of the steps above, check if the zeebe container is in a

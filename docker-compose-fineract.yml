@@ -110,17 +110,17 @@ services:
       zeebe:
         condition: service_healthy
 
-#  tnm-mw-connector:
-#    build:
-#      context: .
-#      dockerfile: Dockerfile
-#    ports:
-#      - "5005:5000"
-#    environment:
-#      ZEEBE_BROKER_CONTACTPOINT: zeebe:26500
-#    depends_on:
-#      zeebe:
-#        condition: service_healthy
+  tnm-mw-connector:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "5005:5000"
+    environment:
+      ZEEBE_BROKER_CONTACTPOINT: zeebe:26500
+    depends_on:
+      zeebe:
+        condition: service_healthy
 
   fineract-ams:
 #    image: oaftech.azurecr.io/oneacrefund/ph-ee-connector-ams-fineract:0.0.4
