@@ -97,7 +97,7 @@ To initiate a request, follow the steps below:
   msisdn: 078123457 # The client's phone number
   BusinessShortCode: 123456 # The business short code
   getAccountDetails:true # Optional. Default value is true. If set to false, the connector will not fetch the client name
-  
+
   ```
   The response will contain the client's name and account number if the account number is valid.
   Response sample:
@@ -124,7 +124,7 @@ To initiate a request, follow the steps below:
     BusinessShortCode: 123456 # The business short code
     ```
     Note:
-    - the `oafTransactionReference` is a unique identifier for the transaction and its value is returned during the validation call. It is used to link the pay request with the validation. 
+    - the `oafTransactionReference` is a unique identifier for the transaction and its value is returned during the validation call. It is used to link the pay request with the validation.
     - In case the pay request does not contain the `oafTransactionReference` or does not come within the time define in the environment variable ``, the connector will redo the validation check before processing the pay request.
 - Send a confirmation request to get the status of the transaction through the **TNM connector** by sending a GET request to `http://localhost:5000/paybill/confirm/:oafTransactionReference`.
   The response will contain the status of the transaction.

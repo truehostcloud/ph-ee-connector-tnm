@@ -8,6 +8,9 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.mifos.connector.common.gsma.dto.Party;
 
+/**
+ * Class representing the request to be sent to the Channel connector.
+ */
 @Getter
 @Setter
 @NoArgsConstructor

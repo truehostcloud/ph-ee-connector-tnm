@@ -1,6 +1,6 @@
 package org.mifos.connector.tnm.camel.routes;
 
-import static org.mifos.connector.tnm.util.TNMUtils.buildPayBillTransactionResponseResponse;
+import static org.mifos.connector.tnm.util.TnmUtils.buildPayBillTransactionResponseResponse;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -9,6 +9,9 @@ import org.mifos.connector.common.camel.ErrorHandlerRouteBuilder;
 import org.mifos.connector.common.channel.dto.TransactionStatusResponseDTO;
 import org.springframework.stereotype.Component;
 
+/**
+ * Route for handling PayBill response.
+ */
 @Slf4j
 @Component
 @RequiredArgsConstructor

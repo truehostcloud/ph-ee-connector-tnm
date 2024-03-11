@@ -15,12 +15,12 @@ import org.springframework.stereotype.Component;
 @Setter
 @Component
 @ConfigurationProperties(prefix = "paybill")
-public class AMSPayBillProperties {
+public class AmsPayBillProperties {
 
     private String accountHoldingInstitutionId;
     private String defaultAms;
     private String defaultAmsShortCode;
-    private List<AMSProperties> groups = new ArrayList<>();
+    private List<AmsProperties> groups = new ArrayList<>();
 
     /**
      * Fetches the AMS properties from the business short code.
@@ -29,7 +29,7 @@ public class AMSPayBillProperties {
      *            the AMS short code
      * @return the AMS properties
      */
-    public AMSProperties getAMSPropertiesFromShortCode(String businessShortCode) {
+    public AmsProperties getAmsPropertiesFromShortCode(String businessShortCode) {
         return getGroups().stream().filter(p -> p.getBusinessShortCode().equalsIgnoreCase(businessShortCode))
                 .findFirst().get();
     }

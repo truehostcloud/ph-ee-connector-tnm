@@ -2,6 +2,9 @@ package org.mifos.connector.tnm.camel.config;
 
 import org.apache.camel.support.DefaultHeaderFilterStrategy;
 
+/**
+ * Class extending {@link DefaultHeaderFilterStrategy}.
+ */
 public class CustomHeaderFilterStrategy extends DefaultHeaderFilterStrategy {
 
     public CustomHeaderFilterStrategy() {

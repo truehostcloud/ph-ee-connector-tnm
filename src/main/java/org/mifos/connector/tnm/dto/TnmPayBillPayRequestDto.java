@@ -9,22 +9,23 @@ import lombok.Setter;
 
 /**
  * Class representing the TNM PayBill Pay request.
- *
+ * <p>
  * Request example: { "TransactionType":"Pay Bill", "TransID":"RKTQDM7W6S", "TransTime":"20191122063845",
  * "TransAmount":"10", "BusinessShortCode":"600638", "BillRefNumber":"A123", "InvoiceNumber":"",
  * "OrgAccountBalance":"49197.00", "ThirdPartyTransID":"", "MSISDN":"2547*****149", "FirstName":"John", }
+ * </p>
  */
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class TNMPayBillPayRequestDTO {
+public class TnmPayBillPayRequestDto {
 
     @JsonProperty("TransactionType")
     private String transactionType;
 
     @JsonProperty("trans_id")
-    private String transactionID;
+    private String transactionId;
 
     @JsonProperty("amount")
     private String transactionAmount;
@@ -41,7 +42,7 @@ public class TNMPayBillPayRequestDTO {
     private String accountBalance;
 
     @JsonProperty("ThirdPartyTransID")
-    private String thirdPatryTransactionID;
+    private String thirdPartyTransactionId;
 
     @JsonProperty("msisdn")
     private String msisdn;
@@ -66,10 +67,10 @@ public class TNMPayBillPayRequestDTO {
 
     @Override
     public String toString() {
-        return "PayBillRequestDTO{" + "transactionType='" + transactionType + '\'' + ", transactionID='" + transactionID
+        return "PayBillRequestDTO{" + "transactionType='" + transactionType + '\'' + ", transactionID='" + transactionId
                 + '\'' + ", transactionAmount='" + transactionAmount + '\'' + ", shortCode='" + shortCode + '\''
                 + ", billRefNo='" + billRefNo + '\'' + ", invoiceNumber='" + invoiceNumber + '\'' + ", accountBalance='"
-                + accountBalance + '\'' + ", thirdPatrytransactionID='" + thirdPatryTransactionID + '\'' + ", msisdn='"
+                + accountBalance + '\'' + ", thirdPatrytransactionID='" + thirdPartyTransactionId + '\'' + ", msisdn='"
                 + msisdn + '\'' + ", firstname='" + firstname + '\'' + '}';
     }
 }

@@ -15,7 +15,7 @@ import org.mifos.connector.common.gsma.dto.CustomData;
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
-public class PayBillValidationResponseDTO {
+public class PayBillValidationResponseDto {
 
     @JsonProperty("reconciled")
     private boolean reconciled;

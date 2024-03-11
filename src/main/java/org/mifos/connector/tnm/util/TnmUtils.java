@@ -27,15 +27,27 @@ import org.mifos.connector.common.gsma.dto.GsmaTransfer;
 import org.mifos.connector.common.gsma.dto.Party;
 import org.mifos.connector.common.mojaloop.type.TransferState;
 import org.mifos.connector.tnm.dto.ChannelRequestDto;
-import org.mifos.connector.tnm.dto.ChannelValidationRequestDTO;
-import org.mifos.connector.tnm.dto.PayBillValidationResponseDTO;
-import org.mifos.connector.tnm.dto.TNMPayBillPayRequestDTO;
+import org.mifos.connector.tnm.dto.ChannelValidationRequestDto;
+import org.mifos.connector.tnm.dto.PayBillValidationResponseDto;
+import org.mifos.connector.tnm.dto.TnmPayBillPayRequestDto;
 import org.springframework.stereotype.Component;
 
+/**
+ * Utility class.
+ */
 @Slf4j
 @Component
-public class TNMUtils {
+public class TnmUtils {
 
+    private TnmUtils() {
+        // Hide the constructor
+    }
+
+    /**
+     * Get the object mapper.
+     *
+     * @return {@link ObjectMapper}
+     */
     // TODO: Move to ph-ee-connector-common
     public static ObjectMapper getObjectMapper() {
         ObjectMapper mapper = new ObjectMapper();
@@ -46,24 +58,24 @@ public class TNMUtils {
     }
 
     /**
-     * Build {@link ChannelValidationRequestDTO}
+     * Build {@link ChannelValidationRequestDto}.
      *
-     * @param accountID
+     * @param accountId
      *            the client account number
      * @param phoneNumber
      *            the phone number
      * @param currency
      *            the currency
-     * @return {@link ChannelValidationRequestDTO}
+     * @return {@link ChannelValidationRequestDto}
      */
-    public static ChannelValidationRequestDTO createValidationRequest(String accountID, String amsName, String currency,
+    public static ChannelValidationRequestDto createValidationRequest(String accountId, String amsName, String currency,
             String phoneNumber, boolean getAccountDetailsFlag) {
 
         // Mapping primary and secondary Identifier
         CustomData primaryIdentifier = new CustomData();
 
         primaryIdentifier.setKey(getPrimaryIdentifierName(amsName));
-        primaryIdentifier.setValue(accountID);
+        primaryIdentifier.setValue(accountId);
 
         CustomData secondaryIdentifier = new CustomData();
         secondaryIdentifier.setKey(SECONDARY_IDENTIFIER_NAME);
@@ -82,43 +94,44 @@ public class TNMUtils {
         getAccountDetails.setKey(GET_ACCOUNT_DETAILS_FLAG);
         getAccountDetails.setValue(getAccountDetailsFlag);
 
-        ChannelValidationRequestDTO validationRequestDTO = new ChannelValidationRequestDTO();
-        validationRequestDTO.setPrimaryIdentifier(primaryIdentifier);
-        validationRequestDTO.setSecondaryIdentifier(secondaryIdentifier);
-        validationRequestDTO.setCustomData(List.of(transactionId, currencyObj, getAccountDetails));
+        ChannelValidationRequestDto validationRequestDto = new ChannelValidationRequestDto();
+        validationRequestDto.setPrimaryIdentifier(primaryIdentifier);
+        validationRequestDto.setSecondaryIdentifier(secondaryIdentifier);
+        validationRequestDto.setCustomData(List.of(transactionId, currencyObj, getAccountDetails));
 
-        return validationRequestDTO;
+        return validationRequestDto;
     }
 
     /**
-     * Convert {@link PayBillValidationResponseDTO} to {@link GsmaTransfer}
+     * Convert {@link PayBillValidationResponseDto} to {@link GsmaTransfer}.
      *
-     * @param paybillValidationResponseDTO
-     *            {@link PayBillValidationResponseDTO}
+     * @param paybillValidationResponseDto
+     *            {@link PayBillValidationResponseDto}
      * @param clientCorrelationId
      *            the correlation id
-     * @return {@link ChannelValidationRequestDTO}
+     * @return {@link ChannelValidationRequestDto}
      */
-    public static GsmaTransfer createGsmaTransferDTO(PayBillValidationResponseDTO paybillValidationResponseDTO,
+    public static GsmaTransfer createGsmaTransferDto(PayBillValidationResponseDto paybillValidationResponseDto,
             String clientCorrelationId, int tnmpayRequestWaitPeriod) {
-        GsmaTransfer gsmaTransfer = new GsmaTransfer();
-        SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSXXX");
-
-        List<CustomData> customData = setCustomData(paybillValidationResponseDTO, clientCorrelationId,
-                tnmpayRequestWaitPeriod);
-        String currentDateTime = formatter.format(new Date());
 
         Party payer = new Party();
-        payer.setPartyIdIdentifier(paybillValidationResponseDTO.getMsisdn());
+        payer.setPartyIdIdentifier(paybillValidationResponseDto.getMsisdn());
         payer.setPartyIdType("MSISDN");
         List<Party> payerObj = new ArrayList<>();
         payerObj.add(payer);
 
         Party payee = new Party();
-        payee.setPartyIdIdentifier(paybillValidationResponseDTO.getMsisdn());
+        payee.setPartyIdIdentifier(paybillValidationResponseDto.getMsisdn());
         payee.setPartyIdType("accountId");
         List<Party> payeeObj = new ArrayList<>();
         payeeObj.add(payee);
+
+        GsmaTransfer gsmaTransfer = new GsmaTransfer();
+        List<CustomData> customData = setCustomData(paybillValidationResponseDto, clientCorrelationId,
+                tnmpayRequestWaitPeriod);
+        SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSXXX");
+
+        String currentDateTime = formatter.format(new Date());
 
         gsmaTransfer.setCustomData(customData);
         gsmaTransfer.setRequestDate(currentDateTime);
@@ -127,37 +140,48 @@ public class TNMUtils {
         gsmaTransfer.setSubType("inbound");
         gsmaTransfer.setType("tnm");
         gsmaTransfer.setDescriptionText("description");
-        gsmaTransfer.setRequestingOrganisationTransactionReference(paybillValidationResponseDTO.getTransactionId());
-        gsmaTransfer.setAmount(paybillValidationResponseDTO.getAmount());
-        gsmaTransfer.setCurrency(paybillValidationResponseDTO.getCurrency());
+        gsmaTransfer.setRequestingOrganisationTransactionReference(paybillValidationResponseDto.getTransactionId());
+        gsmaTransfer.setAmount(paybillValidationResponseDto.getAmount());
+        gsmaTransfer.setCurrency(paybillValidationResponseDto.getCurrency());
 
         return gsmaTransfer;
     }
 
-    private static List<CustomData> setCustomData(PayBillValidationResponseDTO paybillValidationResponseDTO,
+    /**
+     * Set custom data from {@link PayBillValidationResponseDto}.
+     *
+     * @param payBillValidationResponseDto
+     *            {@link PayBillValidationResponseDto}
+     * @param clientCorrelationId
+     *            the client correlation ID
+     * @param tnmpayRequestWaitPeriod
+     *            the wait period for the TNM pay request
+     * @return a list of {@link CustomData}
+     */
+    private static List<CustomData> setCustomData(PayBillValidationResponseDto payBillValidationResponseDto,
             String clientCorrelationId, int tnmpayRequestWaitPeriod) {
         CustomData reconciled = new CustomData();
         reconciled.setKey(PARTY_LOOKUP_FAILED);
-        reconciled.setValue(!paybillValidationResponseDTO.isReconciled());
+        reconciled.setValue(!payBillValidationResponseDto.isReconciled());
         CustomData confirmationReceived = new CustomData();
         confirmationReceived.setKey("confirmationReceived");
         confirmationReceived.setValue(false);
         // This customData will be set as Zeebe variable and be used in Clearing workflow route
         CustomData txnId = new CustomData();
         txnId.setKey(TNM_TRX_ID);
-        txnId.setValue(paybillValidationResponseDTO.getTransactionId());
+        txnId.setValue(payBillValidationResponseDto.getTransactionId());
         CustomData ams = new CustomData();
         ams.setKey("ams");
-        ams.setValue(paybillValidationResponseDTO.getAmsName());
+        ams.setValue(payBillValidationResponseDto.getAmsName());
         CustomData tenantId = new CustomData();
         tenantId.setKey("tenantId");
-        tenantId.setValue(paybillValidationResponseDTO.getAccountHoldingInstitutionId());
+        tenantId.setValue(payBillValidationResponseDto.getAccountHoldingInstitutionId());
         CustomData clientCorrelation = new CustomData();
         clientCorrelation.setKey("clientCorrelationId");
         clientCorrelation.setValue(clientCorrelationId);
         CustomData currency = new CustomData();
         currency.setKey("currency");
-        currency.setValue(paybillValidationResponseDTO.getCurrency());
+        currency.setValue(payBillValidationResponseDto.getCurrency());
 
         CustomData tmmPayRequestWaitPeriod = new CustomData();
         tmmPayRequestWaitPeriod.setKey(TNM_PAY_REQUEST_PAY_WAIT_PERIOD);
@@ -175,13 +199,24 @@ public class TNMUtils {
         return customData;
     }
 
+    /**
+     * Convert {@link TnmPayBillPayRequestDto} to {@link ChannelRequestDto}.
+     *
+     * @param payBillConfirmationRequestDto
+     *            {@link TnmPayBillPayRequestDto}
+     * @param amsName
+     *            the AMS name
+     * @param currency
+     *            the currency
+     * @return {@link ChannelRequestDto}
+     */
     public static ChannelRequestDto convertPayBillToChannelPayload(
-            TNMPayBillPayRequestDTO payBillConfirmationRequestDTO, String amsName, String currency) {
+            TnmPayBillPayRequestDto payBillConfirmationRequestDto, String amsName, String currency) {
         JSONObject payer = new JSONObject();
 
         JSONObject partyIdInfoPayer = new JSONObject();
         partyIdInfoPayer.put("partyIdType", SECONDARY_IDENTIFIER_NAME);
-        partyIdInfoPayer.put("partyIdentifier", payBillConfirmationRequestDTO.getMsisdn());
+        partyIdInfoPayer.put("partyIdentifier", payBillConfirmationRequestDto.getMsisdn());
 
         payer.put("partyIdInfo", partyIdInfoPayer);
 
@@ -189,27 +224,40 @@ public class TNMUtils {
         JSONObject partyIdInfoPayee = new JSONObject();
 
         partyIdInfoPayee.put("partyIdType", getPrimaryIdentifierName(amsName));
-        partyIdInfoPayee.put("partyIdentifier", payBillConfirmationRequestDTO.getAccountNumber());
+        partyIdInfoPayee.put("partyIdentifier", payBillConfirmationRequestDto.getAccountNumber());
 
         payee.put("partyIdInfo", partyIdInfoPayee);
 
         JSONObject amount = new JSONObject();
-        amount.put("amount", payBillConfirmationRequestDTO.getTransactionAmount());
+        amount.put("amount", payBillConfirmationRequestDto.getTransactionAmount());
         amount.put("currency", currency);
 
         Party payeeDto = new Party();
         payeeDto.setPartyIdType(getPrimaryIdentifierName(amsName));
-        payeeDto.setPartyIdIdentifier(payBillConfirmationRequestDTO.getAccountNumber());
+        payeeDto.setPartyIdIdentifier(payBillConfirmationRequestDto.getAccountNumber());
         Party payerDto = new Party();
         payerDto.setPartyIdType(SECONDARY_IDENTIFIER_NAME);
-        payerDto.setPartyIdIdentifier(payBillConfirmationRequestDTO.getMsisdn());
+        payerDto.setPartyIdIdentifier(payBillConfirmationRequestDto.getMsisdn());
         List<Party> payerList = List.of(payerDto);
         List<Party> payeeList = List.of(payeeDto);
 
-        return new ChannelRequestDto(payerList, payeeList, payBillConfirmationRequestDTO.getTransactionAmount(),
-                currency, payBillConfirmationRequestDTO.getTransactionID());
+        return new ChannelRequestDto(payerList, payeeList, payBillConfirmationRequestDto.getTransactionAmount(),
+                currency, payBillConfirmationRequestDto.getTransactionId());
     }
 
+    /**
+     * Build the workflow identifier.
+     *
+     * @param type
+     *            the workflow type
+     * @param subtype
+     *            the workflow subtype
+     * @param amsName
+     *            the AMS name
+     * @param accountHoldingInstitutionId
+     *            the account holding institution ID
+     * @return the workflow identifier
+     */
     public static String getWorkflowId(String type, String subtype, String amsName,
             String accountHoldingInstitutionId) {
         return new StringBuilder().append(subtype).append("_").append(type).append("_").append(amsName).append("-")
@@ -217,10 +265,26 @@ public class TNMUtils {
 
     }
 
+    /**
+     * Generate the transaction identifier.
+     *
+     * @return the transaction id
+     */
     public static String generateTransactionId() {
         return UUID.randomUUID().toString();
     }
 
+    /**
+     * Build the PayBill validation response.
+     *
+     * @param reconciled
+     *            the reconciled flag
+     * @param transactionId
+     *            the transaction id
+     * @param clientName
+     *            the client name
+     * @return the PayBill validation response
+     */
     public static JSONObject buildPayBillValidationResponse(Boolean reconciled, String transactionId,
             String clientName) {
         JSONObject responseObject = new JSONObject();
@@ -235,18 +299,27 @@ public class TNMUtils {
         return responseObject;
     }
 
+    /**
+     * Build the PayBill transaction response.
+     *
+     * @param successful
+     *            the success flag
+     * @param response
+     *            the response
+     * @return the transaction response as {@link JSONObject}
+     */
     public static JSONObject buildPayBillTransactionResponseResponse(boolean successful, Object response) {
         JSONObject responseObject = new JSONObject();
         int status = 404;
         String message = "Transaction not found";
-        if (successful && response != null && response instanceof TransactionStatusResponseDTO responseDTO) {
-            TransferState transferState = responseDTO.getTransferState();
+        if (successful && response != null && response instanceof TransactionStatusResponseDTO responseDto) {
+            TransferState transferState = responseDto.getTransferState();
             log.debug("Transfer state: {}", transferState);
             if (TransferState.COMMITTED.equals(transferState)) {
                 status = 200;
                 message = "Payment successful";
             }
-            responseObject.put("receipt_number", responseDTO.getTransactionId());
+            responseObject.put("receipt_number", responseDto.getTransactionId());
         }
 
         responseObject.put("status", status);
@@ -255,6 +328,13 @@ public class TNMUtils {
         return responseObject;
     }
 
+    /**
+     * Get the primary identifier name.
+     *
+     * @param amsName
+     *            the AMS name
+     * @return the primary identifier name
+     */
     public static String getPrimaryIdentifierName(String amsName) {
         String primaryIdentifierName = null;
         if (amsName.equalsIgnoreCase("roster")) {

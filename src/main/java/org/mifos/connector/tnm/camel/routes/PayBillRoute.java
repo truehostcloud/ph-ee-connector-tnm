@@ -11,10 +11,13 @@ import org.apache.camel.LoggingLevel;
 import org.apache.camel.model.dataformat.JsonLibrary;
 import org.mifos.connector.common.camel.ErrorHandlerRouteBuilder;
 import org.mifos.connector.common.channel.dto.TransactionStatusResponseDTO;
-import org.mifos.connector.tnm.dto.PayBillValidationResponseDTO;
-import org.mifos.connector.tnm.dto.TNMPayBillPayRequestDTO;
+import org.mifos.connector.tnm.dto.PayBillValidationResponseDto;
+import org.mifos.connector.tnm.dto.TnmPayBillPayRequestDto;
 import org.springframework.stereotype.Component;
 
+/**
+ * Class where Paybill routes are defined.
+ */
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -27,7 +30,7 @@ public class PayBillRoute extends ErrorHandlerRouteBuilder {
         // Validate Route
         from("rest:GET:/paybill/validate/{clientAccountNumber}").id("paybill-validation-route")
                 .log(LoggingLevel.INFO, " ## PayBill validation request").to("direct:account-status").unmarshal()
-                .json(JsonLibrary.Jackson, PayBillValidationResponseDTO.class)
+                .json(JsonLibrary.Jackson, PayBillValidationResponseDto.class)
                 .log("## Is reconciled: ${body.isReconciled}").choice().when().simple("${body.isReconciled} == 'true'")
                 .to("direct:start-paybill-workflow").to("direct:paybill-validation-response-success").otherwise()
                 .to("direct:paybill-validation-response-failure").end();
@@ -59,15 +62,14 @@ public class PayBillRoute extends ErrorHandlerRouteBuilder {
         from("direct:start-paybill-workflow").id("start-paybill-workflow")
                 .log(LoggingLevel.INFO, "Starting Tnm Workflow for PayBill")
                 .setBody(payBillRouteProcessor::buildBodyForStartPayBillWorkflow)
-                .toD(CHANNEL_URL_PROPERTY_IN_HEADER + "/channel/gsma/transaction"
-                        + BRIDGE_ENDPOINT_QUERY_PARAM + "&headerFilterStrategy=#"
-                        + CUSTOM_HEADER_FILTER_STRATEGY)
+                .toD(CHANNEL_URL_PROPERTY_IN_HEADER + "/channel/gsma/transaction" + BRIDGE_ENDPOINT_QUERY_PARAM
+                        + "&headerFilterStrategy=#" + CUSTOM_HEADER_FILTER_STRATEGY)
                 .log(LoggingLevel.INFO, "Starting GSMA Txn workflow in channel")
                 .to("log:INFO?showBody=true&showHeaders=true");
 
         from("direct:paybill-pay-route").id("paybill-pay-route")
                 .log(LoggingLevel.INFO, "Starting Tnm PayBill Pay route").unmarshal()
-                .json(JsonLibrary.Jackson, TNMPayBillPayRequestDTO.class)
+                .json(JsonLibrary.Jackson, TnmPayBillPayRequestDto.class)
                 .process(payBillRouteProcessor::processRequestForPayBillPayRoute).onException(Exception.class)
                 .log(LoggingLevel.ERROR, "Error: ${exception.message}").end();
 

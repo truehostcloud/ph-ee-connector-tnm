@@ -16,10 +16,10 @@ import static org.mifos.connector.tnm.camel.config.CamelProperties.SECONDARY_IDE
 import static org.mifos.connector.tnm.camel.config.CamelProperties.TENANT_ID;
 import static org.mifos.connector.tnm.camel.config.CamelProperties.TNM_PAYBILL_WORKFLOW_SUBTYPE;
 import static org.mifos.connector.tnm.camel.config.CamelProperties.TNM_PAYBILL_WORKFLOW_TYPE;
-import static org.mifos.connector.tnm.util.TNMUtils.buildPayBillValidationResponse;
-import static org.mifos.connector.tnm.util.TNMUtils.generateTransactionId;
-import static org.mifos.connector.tnm.util.TNMUtils.getPrimaryIdentifierName;
-import static org.mifos.connector.tnm.util.TNMUtils.getWorkflowId;
+import static org.mifos.connector.tnm.util.TnmUtils.buildPayBillValidationResponse;
+import static org.mifos.connector.tnm.util.TnmUtils.generateTransactionId;
+import static org.mifos.connector.tnm.util.TnmUtils.getPrimaryIdentifierName;
+import static org.mifos.connector.tnm.util.TnmUtils.getWorkflowId;
 import static org.mifos.connector.tnm.zeebe.ZeebeVariables.CURRENCY;
 import static org.mifos.connector.tnm.zeebe.ZeebeVariables.EXTERNAL_ID;
 import static org.mifos.connector.tnm.zeebe.ZeebeVariables.IS_VALIDATION_REFERENCE_PRESENT;
@@ -43,20 +43,20 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.camel.Exchange;
 import org.json.JSONObject;
 import org.mifos.connector.common.gsma.dto.GsmaTransfer;
-import org.mifos.connector.tnm.camel.config.AMSPayBillProperties;
-import org.mifos.connector.tnm.camel.config.AMSProperties;
+import org.mifos.connector.tnm.camel.config.AmsPayBillProperties;
+import org.mifos.connector.tnm.camel.config.AmsProperties;
 import org.mifos.connector.tnm.camel.config.ZeebeProperties;
 import org.mifos.connector.tnm.dto.ChannelRequestDto;
-import org.mifos.connector.tnm.dto.ChannelValidationRequestDTO;
-import org.mifos.connector.tnm.dto.PayBillValidationResponseDTO;
-import org.mifos.connector.tnm.dto.TNMPayBillPayRequestDTO;
-import org.mifos.connector.tnm.util.TNMUtils;
+import org.mifos.connector.tnm.dto.ChannelValidationRequestDto;
+import org.mifos.connector.tnm.dto.PayBillValidationResponseDto;
+import org.mifos.connector.tnm.dto.TnmPayBillPayRequestDto;
+import org.mifos.connector.tnm.util.TnmUtils;
 import org.mifos.connector.tnm.zeebe.ZeebeVariables;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 /**
- * Class to process the paybill route.
+ * Class to process the PayBill route.
  *
  */
 @Slf4j
@@ -65,43 +65,43 @@ import org.springframework.stereotype.Component;
 public class PayBillRouteProcessor {
 
     private final ZeebeClient zeebeClient;
-    private final AMSPayBillProperties amsPayBillProps;
+    private final AmsPayBillProperties amsPayBillProps;
 
     private final ZeebeProperties zeebeProperties;
 
     @Value("${channel.host}")
     private String channelUrl;
 
-    private ObjectMapper objectMapper = TNMUtils.getObjectMapper();
+    private ObjectMapper objectMapper = TnmUtils.getObjectMapper();
     public static Map<String, Boolean> reconciledStore = new HashMap<>();
     public static Map<String, String> workflowInstanceStore = new HashMap<>();
 
     /**
-     * Build the request body for get account status request
+     * Build the request body for get account status request.
      *
      * @param exchange
      *            {@link Exchange}
-     * @return
+     * @return a stringified request body.
      */
     public String buildBodyForAccountStatus(Exchange exchange) {
         log.debug("## PayBill Validation Payload request");
-        String clientAccountNumber = exchange.getIn().getHeader(CLIENT_ACCOUNT_NUMBER).toString();
-        Object currencyFromHeaders = exchange.getIn().getHeader(CURRENCY);
-        Object shortCodeFromReq = exchange.getIn().getHeader(BUSINESS_SHORT_CODE);
-        Object msisdn = exchange.getIn().getHeader(SECONDARY_IDENTIFIER_NAME);
-        Object getAccountDetails = exchange.getIn().getHeader(GET_ACCOUNT_DETAILS_FLAG);
-        boolean getAccountDetailsFlag = !Objects.nonNull(getAccountDetails)
+        final String clientAccountNumber = exchange.getIn().getHeader(CLIENT_ACCOUNT_NUMBER).toString();
+        final Object currencyFromHeaders = exchange.getIn().getHeader(CURRENCY);
+        final Object shortCodeFromReq = exchange.getIn().getHeader(BUSINESS_SHORT_CODE);
+        final Object msisdn = exchange.getIn().getHeader(SECONDARY_IDENTIFIER_NAME);
+        final Object getAccountDetails = exchange.getIn().getHeader(GET_ACCOUNT_DETAILS_FLAG);
+        final boolean getAccountDetailsFlag = !Objects.nonNull(getAccountDetails)
                 || Boolean.parseBoolean(getAccountDetails.toString());
 
         if (Objects.isNull(msisdn)) {
             throw new RuntimeException("MSISDN is required for PayBill validation");
         }
 
-        AMSProperties amsProperties = amsPayBillProps
-                .getAMSPropertiesFromShortCode(Objects.nonNull(shortCodeFromReq) ? shortCodeFromReq.toString()
+        AmsProperties amsProperties = amsPayBillProps
+                .getAmsPropertiesFromShortCode(Objects.nonNull(shortCodeFromReq) ? shortCodeFromReq.toString()
                         : amsPayBillProps.getDefaultAmsShortCode());
-        String amsName = amsProperties.getAms();
-        String currency = Objects.nonNull(currencyFromHeaders) ? currencyFromHeaders.toString()
+        final String amsName = amsProperties.getAms();
+        final String currency = Objects.nonNull(currencyFromHeaders) ? currencyFromHeaders.toString()
                 : amsProperties.getCurrency();
         exchange.getIn().removeHeaders("*");
         exchange.getIn().setHeader("amsUrl", amsProperties.getBaseUrl());
@@ -113,7 +113,7 @@ public class PayBillRouteProcessor {
         exchange.setProperty("primaryIdentifierValue", clientAccountNumber);
         exchange.setProperty("secondaryIdentifier", SECONDARY_IDENTIFIER_NAME);
         exchange.setProperty("secondaryIdentifierValue", msisdn);
-        ChannelValidationRequestDTO obj = TNMUtils.createValidationRequest(clientAccountNumber, amsName, currency,
+        ChannelValidationRequestDto obj = TnmUtils.createValidationRequest(clientAccountNumber, amsName, currency,
                 msisdn.toString(), getAccountDetailsFlag);
         log.debug("Header:{}", exchange.getIn().getHeaders());
         try {
@@ -123,12 +123,19 @@ public class PayBillRouteProcessor {
         }
     }
 
+    /**
+     * Build the request body for start PayBill workflow.
+     *
+     * @param e
+     *            {@link Exchange}
+     * @return a stringified request body.
+     */
     public String buildBodyForStartPayBillWorkflow(Exchange e) {
 
-        PayBillValidationResponseDTO validationResponseDTO = e.getIn().getBody(PayBillValidationResponseDTO.class);
-        boolean isReconciled = validationResponseDTO.isReconciled();
-        String validationTransactionId = validationResponseDTO.getTransactionId();
-        log.debug("PayBill Response: {}", validationResponseDTO);
+        PayBillValidationResponseDto validationResponseDto = e.getIn().getBody(PayBillValidationResponseDto.class);
+        boolean isReconciled = validationResponseDto.isReconciled();
+        String validationTransactionId = validationResponseDto.getTransactionId();
+        log.debug("PayBill Response: {}", validationResponseDto);
         log.debug("Validation IsReconciled: {}", isReconciled);
         log.debug("Validation Transaction ID present: {}", validationTransactionId);
 
@@ -136,16 +143,16 @@ public class PayBillRouteProcessor {
         String clientCorrelationId = validationTransactionId;
         reconciledStore.put(clientCorrelationId, isReconciled);
 
-        GsmaTransfer gsmaTransfer = TNMUtils.createGsmaTransferDTO(validationResponseDTO, clientCorrelationId,
+        GsmaTransfer gsmaTransfer = TnmUtils.createGsmaTransferDto(validationResponseDto, clientCorrelationId,
                 zeebeProperties.getWaitTnmPayRequestPeriod());
 
         e.getIn().removeHeaders("*");
-        e.getIn().setHeader(ACCOUNT_HOLDING_INSTITUTION_ID, validationResponseDTO.getAccountHoldingInstitutionId());
-        e.getIn().setHeader(AMS_NAME, validationResponseDTO.getAmsName());
-        e.getIn().setHeader(TENANT_ID, validationResponseDTO.getAccountHoldingInstitutionId());
+        e.getIn().setHeader(ACCOUNT_HOLDING_INSTITUTION_ID, validationResponseDto.getAccountHoldingInstitutionId());
+        e.getIn().setHeader(AMS_NAME, validationResponseDto.getAmsName());
+        e.getIn().setHeader(TENANT_ID, validationResponseDto.getAccountHoldingInstitutionId());
         e.getIn().setHeader(CLIENT_CORRELATION_ID, clientCorrelationId);
         e.getIn().setHeader(CONTENT_TYPE, CONTENT_TYPE_VAL);
-        e.getIn().setHeader(CLIENT_NAME, validationResponseDTO.getClientName());
+        e.getIn().setHeader(CLIENT_NAME, validationResponseDto.getClientName());
 
         e.setProperty("isValidationReferencePresent", isReconciled);
         e.setProperty("channelUrl", channelUrl);
@@ -156,49 +163,57 @@ public class PayBillRouteProcessor {
         }
     }
 
+    /**
+     * Process the request for PayBill pay route.
+     *
+     * @param e
+     *            {@link Exchange}
+     */
     public void processRequestForPayBillPayRoute(Exchange e) {
-        TNMPayBillPayRequestDTO requestDTO = e.getIn().getBody(TNMPayBillPayRequestDTO.class);
-        log.debug("PayBill Response: {}", requestDTO);
-        log.debug("Is oafTransactionReference present: {}", requestDTO.getOafValidationRef());
+        TnmPayBillPayRequestDto requestDto = e.getIn().getBody(TnmPayBillPayRequestDto.class);
+        log.debug("PayBill Response: {}", requestDto);
+        log.debug("Is oafTransactionReference present: {}", requestDto.getOafValidationRef());
 
         String shortCodeFromReq = e.getIn().getHeader(BUSINESS_SHORT_CODE).toString();
         String currencyFromHeaders = e.getIn().getHeader(CURRENCY).toString();
 
-        AMSProperties amsProperties = amsPayBillProps.getAMSPropertiesFromShortCode(
+        AmsProperties amsProperties = amsPayBillProps.getAmsPropertiesFromShortCode(
                 Objects.nonNull(shortCodeFromReq) ? shortCodeFromReq : amsPayBillProps.getDefaultAmsShortCode());
-        String amsName = amsProperties.getAms();
-        String currency = Objects.nonNull(currencyFromHeaders) ? currencyFromHeaders : amsProperties.getCurrency();
-        String amsUrl = amsProperties.getBaseUrl();
+        final String amsName = amsProperties.getAms();
+        final String currency = Objects.nonNull(currencyFromHeaders) ? currencyFromHeaders
+                : amsProperties.getCurrency();
+        final String amsUrl = amsProperties.getBaseUrl();
 
-        Boolean isReconciled = Objects.nonNull(requestDTO.getOafValidationRef());
-        String oafTransactionReference = requestDTO.getOafValidationRef();
-        requestDTO.setValidationReferencePresent(isReconciled);
-        requestDTO.setAmsName(amsProperties.getAms());
+        Boolean isReconciled = Objects.nonNull(requestDto.getOafValidationRef());
+        final String oafTransactionReference = requestDto.getOafValidationRef();
+        requestDto.setValidationReferencePresent(isReconciled);
+        requestDto.setAmsName(amsProperties.getAms());
 
         e.setProperty("amsUrl", amsUrl);
         e.setProperty("secondaryIdentifier", "MSISDN");
-        e.setProperty("secondaryIdentifierValue", requestDTO.getMsisdn());
+        e.setProperty("secondaryIdentifierValue", requestDto.getMsisdn());
 
         Gson gson = new Gson();
-        ChannelRequestDto channelRequestDTO = TNMUtils.convertPayBillToChannelPayload(requestDTO, amsName, currency);
-        String channelRequestDTOString = gson.toJson(channelRequestDTO);
-        e.setProperty("PAY_REQUEST", channelRequestDTOString);
+        ChannelRequestDto channelRequestDto = TnmUtils.convertPayBillToChannelPayload(requestDto, amsName, currency);
+        String channelRequestDtoString = gson.toJson(channelRequestDto);
+        e.setProperty("PAY_REQUEST", channelRequestDtoString);
+
+        e.setProperty(CHANNEL_REQUEST, channelRequestDto);
+        e.setProperty(EXTERNAL_ID, requestDto.getTransactionId());
+
+        Map<String, Object> variables = new HashMap<>();
+        variables.put("confirmationReceived", true);
+        variables.put(CHANNEL_REQUEST, channelRequestDtoString);
+        variables.put("amount", requestDto.getTransactionAmount());
+        variables.put("accountId", requestDto.getAccountNumber());
+        variables.put("originDate",
+                Long.parseLong(LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"))));
+        variables.put("phoneNumber", requestDto.getMsisdn());
+        variables.put(SERVER_TRANSACTION_ID, requestDto.getTransactionId());
 
         // Getting TNM workflow transaction id and removing key
         String transactionId = workflowInstanceStore.get(oafTransactionReference);
 
-        e.setProperty(CHANNEL_REQUEST, channelRequestDTO);
-        e.setProperty(EXTERNAL_ID, requestDTO.getTransactionID());
-
-        Map<String, Object> variables = new HashMap<>();
-        variables.put("confirmationReceived", true);
-        variables.put(CHANNEL_REQUEST, channelRequestDTOString);
-        variables.put("amount", requestDTO.getTransactionAmount());
-        variables.put("accountId", requestDTO.getAccountNumber());
-        variables.put("originDate",
-                Long.parseLong(LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"))));
-        variables.put("phoneNumber", requestDTO.getMsisdn());
-        variables.put(SERVER_TRANSACTION_ID, requestDTO.getTransactionID());
         variables.put(IS_VALIDATION_REFERENCE_PRESENT, isReconciled && transactionId != null);
         variables.put(TRANSACTION_ID, oafTransactionReference);
         variables.put(TRANSFER_CREATE_FAILED, false);
@@ -222,18 +237,31 @@ public class PayBillRouteProcessor {
         }
     }
 
+    /**
+     * Process the request for Transaction status check.
+     *
+     * @param exchange
+     *            {@link Exchange}
+     */
     public void processRequestForTransactionStatusCheck(Exchange exchange) {
         log.debug("## PayBill Transaction status check route");
-        String tnmTransactionId = exchange.getIn().getHeader(PAYBILL_TRANSACTION_ID_URL_PARAM).toString();
 
         exchange.getIn().removeHeaders("*");
         exchange.getIn().setHeader(CONTENT_TYPE, CONTENT_TYPE_VAL);
         exchange.getIn().setHeader("requestType", "transfers");
         exchange.getIn().setHeader(TENANT_ID, "oaf");
+
+        String tnmTransactionId = exchange.getIn().getHeader(PAYBILL_TRANSACTION_ID_URL_PARAM).toString();
         exchange.setProperty(PAYBILL_TRANSACTION_ID_URL_PARAM, tnmTransactionId);
         exchange.setProperty(CHANNEL_URL, channelUrl);
     }
 
+    /**
+     * Process the response for PayBill validation response success.
+     *
+     * @param e
+     *            {@link Exchange}
+     */
     public void processResponseForPayBillValidationResponseSuccess(Exchange e) {
         String channelResponseBodyString = e.getIn().getBody(String.class);
         JSONObject channelResponse = new JSONObject(channelResponseBodyString);
@@ -252,6 +280,12 @@ public class PayBillRouteProcessor {
                 Objects.nonNull(clientName) ? clientName.toString() : null).toString());
     }
 
+    /**
+     * Process the response for PayBill validation response error.
+     *
+     * @param e
+     *            {@link Exchange}
+     */
     public void processResponseForPayBillValidationResponseError(Exchange e) {
         JSONObject channelResponse = new JSONObject(e.getIn().getBody());
         log.debug("channelResponse:{}", channelResponse);

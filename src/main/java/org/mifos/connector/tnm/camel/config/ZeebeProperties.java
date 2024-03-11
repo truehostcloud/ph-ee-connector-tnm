@@ -18,6 +18,10 @@ public class ZeebeProperties {
     private Client client;
     private int waitTnmPayRequestPeriod = 30;
 
+    /**
+     * Class to hold properties for Zeebe client.
+     *
+     */
     @Getter
     @Setter
     public class Client {

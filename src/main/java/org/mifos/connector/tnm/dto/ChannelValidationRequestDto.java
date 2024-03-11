@@ -9,12 +9,15 @@ import lombok.Setter;
 import lombok.ToString;
 import org.mifos.connector.common.gsma.dto.CustomData;
 
+/**
+ * Class representing the request to be sent to the Channel connector.
+ */
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @ToString
-public class ChannelValidationRequestDTO {
+public class ChannelValidationRequestDto {
 
     @JsonProperty("primaryIdentifier")
     private CustomData primaryIdentifier;
