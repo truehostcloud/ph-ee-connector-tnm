@@ -1,4 +1,4 @@
-package org.mifos.connector.camel.config;
+package org.mifos.connector.tnm.camel.config;
 
 import java.util.HashMap;
 import org.apache.camel.CamelContext;
@@ -25,6 +25,7 @@ public class CamelContextConfig {
     @Bean
     CamelContextConfiguration contextConfiguration() {
         return new CamelContextConfiguration() {
+
             @Override
             public void beforeApplicationStart(CamelContext camelContext) {
                 camelContext.setTracing(false);

@@ -1,3 +1,5 @@
+server:
+  port: 8085
 camel:
   server-port: 5000
   springboot:
@@ -13,6 +15,9 @@ zeebe:
     evenly-allocated-max-jobs: "#{${zeebe.client.max-execution-threads} / ${zeebe.client.number-of-workers}}"
   broker:
     contactpoint: "localhost:26500"
+  init-transfer:
+    wait-timer: 5
+  wait-tnm-pay-request-period: 60
 
 management:
   endpoint:
@@ -23,3 +28,20 @@ management:
 logging:
   level:
     ROOT: INFO
+
+channel:
+  host: "http://localhost:8082"
+
+paybill:
+  account-holding-institution-id: "oaf"
+  default-ams: "roster"
+  default-ams-short-code: "12345678"
+  groups:
+    - business-short-code: ${ACCOUNTS_FINERACT_PAYBILL_SHORTCODE:24322607}
+      ams: "fineract"
+      base-url: ${ACCOUNTS_FINERACT_BASEURL:http://127.24.0.7:5000}
+      currency: ${ACCOUNTS_FINERACT_CURRENCY:RWF}
+    - business-short-code: ${ACCOUNTS_ROSTER_PAYBILL_SHORTCODE:12345678}
+      ams: "roster"
+      base-url: ${ACCOUNTS_ROSTER_BASEURL}
+      currency: ${ACCOUNTS_ROSTER_CURRENCY:MWK}

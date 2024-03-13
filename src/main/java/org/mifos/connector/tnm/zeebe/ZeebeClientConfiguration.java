@@ -1,4 +1,4 @@
-package org.mifos.connector.zeebe;
+package org.mifos.connector.tnm.zeebe;
 
 import io.camunda.zeebe.client.ZeebeClient;
 import org.springframework.beans.factory.annotation.Value;
@@ -24,10 +24,7 @@ public class ZeebeClientConfiguration {
      */
     @Bean
     public ZeebeClient setup() {
-        return ZeebeClient.newClientBuilder()
-            .gatewayAddress(zeebeBrokerContactPoint)
-            .usePlaintext()
-            .numJobWorkerExecutionThreads(zeebeClientMaxThreads)
-            .build();
+        return ZeebeClient.newClientBuilder().gatewayAddress(zeebeBrokerContactPoint).usePlaintext()
+                .numJobWorkerExecutionThreads(zeebeClientMaxThreads).build();
     }
 }
