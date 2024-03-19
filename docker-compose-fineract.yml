@@ -123,8 +123,7 @@ services:
         condition: service_healthy
 
   fineract-ams:
-#    image: oaftech.azurecr.io/oneacrefund/ph-ee-connector-ams-fineract:0.0.4
-    image: ph-ee-connector-ams-fineract-fineract-connector:latest
+    image: oaftech.azurecr.io/oneacrefund/ph-ee-connector-ams-fineract:0.0.5
     ports:
       - "8084:5004"
       - "5004:5000"

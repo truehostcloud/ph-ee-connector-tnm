@@ -10,7 +10,7 @@ FROM eclipse-temurin:17-alpine
 
 WORKDIR /app
 
-COPY --from=build /ph-ee-connector-tnm/build/libs/ph-ee-connector-tnm*.jar .
+COPY --from=build /ph-ee-connector-tnm/build/libs/ph-ee-connector-tnm*.jar ph-ee-connector-tnm.jar
 
 EXPOSE 5000
 
