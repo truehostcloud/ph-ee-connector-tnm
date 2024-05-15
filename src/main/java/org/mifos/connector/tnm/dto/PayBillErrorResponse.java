@@ -6,7 +6,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 /**
- * Error response class
+ * Error response class.
  */
 @Getter
 @Setter

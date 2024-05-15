@@ -15,7 +15,7 @@ import org.mifos.connector.common.channel.dto.TransactionStatusResponseDTO;
 import org.mifos.connector.tnm.dto.PayBillErrorResponse;
 import org.mifos.connector.tnm.dto.PayBillValidationResponseDto;
 import org.mifos.connector.tnm.dto.TnmPayBillPayRequestDto;
-import org.mifos.connector.tnm.exception.TNMConnectorException;
+import org.mifos.connector.tnm.exception.TnmConnectorException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 
@@ -96,7 +96,7 @@ public class PayBillRoute extends ErrorHandlerRouteBuilder {
                     errorResponse.setMessage(exception.getMessage());
                     exchange.getIn().setBody(errorResponse);
                     HttpStatus httpStatus = HttpStatus.INTERNAL_SERVER_ERROR;
-                    if (exception instanceof TNMConnectorException tnmConnectorException) {
+                    if (exception instanceof TnmConnectorException tnmConnectorException) {
                         httpStatus = tnmConnectorException.getHttpStatus();
                     }
                     exchange.getIn().setHeader(Exchange.HTTP_RESPONSE_CODE, httpStatus.value());

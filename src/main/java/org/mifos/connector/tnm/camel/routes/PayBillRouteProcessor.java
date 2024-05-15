@@ -51,7 +51,7 @@ import org.mifos.connector.tnm.dto.ChannelValidationRequestDto;
 import org.mifos.connector.tnm.dto.PayBillValidationResponseDto;
 import org.mifos.connector.tnm.dto.TnmPayBillPayRequestDto;
 import org.mifos.connector.tnm.exception.MissingFieldException;
-import org.mifos.connector.tnm.exception.TNMConnectorJsonProcessingException;
+import org.mifos.connector.tnm.exception.TnmConnectorJsonProcessingException;
 import org.mifos.connector.tnm.util.TnmUtils;
 import org.mifos.connector.tnm.zeebe.ZeebeVariables;
 import org.springframework.beans.factory.annotation.Value;
@@ -122,7 +122,7 @@ public class PayBillRouteProcessor {
         try {
             return objectMapper.writeValueAsString(obj);
         } catch (JsonProcessingException ex) {
-            throw new TNMConnectorJsonProcessingException(ex.getMessage(), ex);
+            throw new TnmConnectorJsonProcessingException(ex.getMessage(), ex);
         }
     }
 
@@ -162,7 +162,7 @@ public class PayBillRouteProcessor {
         try {
             return objectMapper.writeValueAsString(gsmaTransfer);
         } catch (JsonProcessingException ex) {
-            throw new TNMConnectorJsonProcessingException(ex.getMessage(), ex);
+            throw new TnmConnectorJsonProcessingException(ex.getMessage(), ex);
         }
     }
 

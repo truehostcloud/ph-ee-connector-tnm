@@ -5,7 +5,7 @@ import org.springframework.http.HttpStatus;
 /**
  * Exception thrown when a required field is missing in the request.
  */
-public class MissingFieldException extends TNMConnectorException {
+public class MissingFieldException extends TnmConnectorException {
 
     public MissingFieldException(String message) {
         super(message, HttpStatus.BAD_REQUEST);
