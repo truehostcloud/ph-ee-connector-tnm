@@ -17,8 +17,9 @@ import static org.mifos.connector.tnm.camel.config.CamelProperties.TENANT_ID;
 import static org.mifos.connector.tnm.camel.config.CamelProperties.TNM_PAYBILL_WORKFLOW_SUBTYPE;
 import static org.mifos.connector.tnm.camel.config.CamelProperties.TNM_PAYBILL_WORKFLOW_TYPE;
 import static org.mifos.connector.tnm.util.TnmUtils.buildPayBillValidationResponse;
-import static org.mifos.connector.tnm.util.TnmUtils.generateTransactionId;
+import static org.mifos.connector.tnm.util.TnmUtils.generateWorkflowId;
 import static org.mifos.connector.tnm.util.TnmUtils.getPrimaryIdentifierName;
+import static org.mifos.connector.tnm.util.TnmUtils.getTnmPayRequestPayWaitPeriod;
 import static org.mifos.connector.tnm.util.TnmUtils.getWorkflowId;
 import static org.mifos.connector.tnm.zeebe.ZeebeVariables.CURRENCY;
 import static org.mifos.connector.tnm.zeebe.ZeebeVariables.EXTERNAL_ID;
@@ -29,7 +30,6 @@ import static org.mifos.connector.tnm.zeebe.ZeebeVariables.TRANSFER_CREATE_FAILE
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.gson.Gson;
 import io.camunda.zeebe.client.ZeebeClient;
 import java.time.Duration;
 import java.time.Instant;
@@ -45,6 +45,7 @@ import org.json.JSONObject;
 import org.mifos.connector.common.gsma.dto.GsmaTransfer;
 import org.mifos.connector.tnm.camel.config.AmsPayBillProperties;
 import org.mifos.connector.tnm.camel.config.AmsProperties;
+import org.mifos.connector.tnm.camel.config.CamelProperties;
 import org.mifos.connector.tnm.camel.config.ZeebeProperties;
 import org.mifos.connector.tnm.dto.ChannelRequestDto;
 import org.mifos.connector.tnm.dto.ChannelValidationRequestDto;
@@ -196,46 +197,46 @@ public class PayBillRouteProcessor {
         e.setProperty("secondaryIdentifier", "MSISDN");
         e.setProperty("secondaryIdentifierValue", requestDto.getMsisdn());
 
-        Gson gson = new Gson();
         ChannelRequestDto channelRequestDto = TnmUtils.convertPayBillToChannelPayload(requestDto, amsName, currency);
-        String channelRequestDtoString = gson.toJson(channelRequestDto);
-        e.setProperty("PAY_REQUEST", channelRequestDtoString);
-
-        e.setProperty(CHANNEL_REQUEST, channelRequestDto);
-        e.setProperty(EXTERNAL_ID, requestDto.getTransactionId());
+        channelRequestDto.setUseWorkflowIdAsTransactionId(true);
+        channelRequestDto.setWorkflowId(oafTransactionReference);
 
         Map<String, Object> variables = new HashMap<>();
         variables.put("confirmationReceived", true);
-        variables.put(CHANNEL_REQUEST, channelRequestDtoString);
+        variables.put(CHANNEL_REQUEST, channelRequestDto.toString());
         variables.put("amount", requestDto.getTransactionAmount());
         variables.put("accountId", requestDto.getAccountNumber());
         variables.put("originDate",
                 Long.parseLong(LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"))));
         variables.put("phoneNumber", requestDto.getMsisdn());
-        variables.put(SERVER_TRANSACTION_ID, requestDto.getTransactionId());
+        String tnmTransactionId = requestDto.getTransactionId();
+        variables.put(SERVER_TRANSACTION_ID, tnmTransactionId);
+        variables.put(EXTERNAL_ID, tnmTransactionId);
 
         // Getting TNM workflow transaction id and removing key
-        String transactionId = workflowInstanceStore.get(oafTransactionReference);
+        String workflowInstanceKey = workflowInstanceStore.get(oafTransactionReference);
 
-        variables.put(IS_VALIDATION_REFERENCE_PRESENT, isReconciled && transactionId != null);
+        variables.put(IS_VALIDATION_REFERENCE_PRESENT, isReconciled && workflowInstanceKey != null);
         variables.put(TRANSACTION_ID, oafTransactionReference);
         variables.put(TRANSFER_CREATE_FAILED, false);
-        log.info("Workflow transaction id : {}", transactionId);
+        log.info("Workflow transaction id : {}", workflowInstanceKey);
 
-        if (transactionId != null) {
-            zeebeClient.newPublishMessageCommand().messageName("pendingPayRequest").correlationKey(transactionId)
+        if (workflowInstanceKey != null) {
+            zeebeClient.newPublishMessageCommand().messageName("pendingPayRequest").correlationKey(workflowInstanceKey)
                     .timeToLive(Duration.ofMillis(300)).variables(variables).send();
             log.debug("Published Variables");
         } else {
             log.debug("No workflow of such transaction ID exists");
-            transactionId = generateTransactionId();
-            variables.put(ZeebeVariables.TRANSACTION_ID, transactionId);
+            workflowInstanceKey = generateWorkflowId();
+            variables.put(ZeebeVariables.TRANSACTION_ID, workflowInstanceKey);
             variables.put(ZeebeVariables.ORIGIN_DATE, Instant.now().toEpochMilli());
+            variables.put(CamelProperties.TNM_PAY_REQUEST_PAY_WAIT_PERIOD,
+                    getTnmPayRequestPayWaitPeriod(zeebeProperties.getWaitTnmPayRequestPeriod()));
             zeebeClient.newCreateInstanceCommand()
                     .bpmnProcessId(getWorkflowId(TNM_PAYBILL_WORKFLOW_TYPE, TNM_PAYBILL_WORKFLOW_SUBTYPE, amsName,
                             amsPayBillProps.getAccountHoldingInstitutionId()))
                     .latestVersion().variables(variables).send().join();
-            zeebeClient.newPublishMessageCommand().messageName("pendingPayRequest").correlationKey(transactionId)
+            zeebeClient.newPublishMessageCommand().messageName("pendingPayRequest").correlationKey(workflowInstanceKey)
                     .timeToLive(Duration.ofMillis(300)).variables(variables).send();
         }
     }

@@ -84,7 +84,7 @@ public class TnmUtils {
         // Mapping custom data
         CustomData transactionId = new CustomData();
         transactionId.setKey(TRANSACTION_ID);
-        transactionId.setValue(generateTransactionId());
+        transactionId.setValue(generateWorkflowId());
 
         CustomData currencyObj = new CustomData();
         currencyObj.setKey(CURRENCY);
@@ -185,7 +185,7 @@ public class TnmUtils {
 
         CustomData tmmPayRequestWaitPeriod = new CustomData();
         tmmPayRequestWaitPeriod.setKey(TNM_PAY_REQUEST_PAY_WAIT_PERIOD);
-        tmmPayRequestWaitPeriod.setValue(String.format("PT%dS", tnmpayRequestWaitPeriod));
+        tmmPayRequestWaitPeriod.setValue(getTnmPayRequestPayWaitPeriod(tnmpayRequestWaitPeriod));
 
         List<CustomData> customData = new ArrayList<>();
         customData.add(reconciled);
@@ -232,17 +232,7 @@ public class TnmUtils {
         amount.put("amount", payBillConfirmationRequestDto.getTransactionAmount());
         amount.put("currency", currency);
 
-        Party payeeDto = new Party();
-        payeeDto.setPartyIdType(getPrimaryIdentifierName(amsName));
-        payeeDto.setPartyIdIdentifier(payBillConfirmationRequestDto.getAccountNumber());
-        Party payerDto = new Party();
-        payerDto.setPartyIdType(SECONDARY_IDENTIFIER_NAME);
-        payerDto.setPartyIdIdentifier(payBillConfirmationRequestDto.getMsisdn());
-        List<Party> payerList = List.of(payerDto);
-        List<Party> payeeList = List.of(payeeDto);
-
-        return new ChannelRequestDto(payerList, payeeList, payBillConfirmationRequestDto.getTransactionAmount(),
-                currency, payBillConfirmationRequestDto.getTransactionId());
+        return new ChannelRequestDto(payer, payee, amount, null, null);
     }
 
     /**
@@ -270,7 +260,7 @@ public class TnmUtils {
      *
      * @return the transaction id
      */
-    public static String generateTransactionId() {
+    public static String generateWorkflowId() {
         return UUID.randomUUID().toString();
     }
 
@@ -343,6 +333,10 @@ public class TnmUtils {
             primaryIdentifierName = FINERACT_PRIMARY_IDENTIFIER_NAME;
         }
         return primaryIdentifierName;
+    }
+
+    public static String getTnmPayRequestPayWaitPeriod(int tnmpayRequestWaitPeriod) {
+        return String.format("PT%dS", tnmpayRequestWaitPeriod);
     }
 
 }

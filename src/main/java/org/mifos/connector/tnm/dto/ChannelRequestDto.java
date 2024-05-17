@@ -1,12 +1,10 @@
 package org.mifos.connector.tnm.dto;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import org.mifos.connector.common.gsma.dto.Party;
+import org.json.JSONObject;
 
 /**
  * Class representing the request to be sent to the Channel connector.
@@ -17,18 +15,17 @@ import org.mifos.connector.common.gsma.dto.Party;
 @AllArgsConstructor
 public class ChannelRequestDto {
 
-    @JsonProperty("payer")
-    List<Party> payer;
+    JSONObject payer;
+    JSONObject payee;
+    JSONObject amount;
 
-    @JsonProperty("payee")
-    List<Party> payee;
+    Boolean useWorkflowIdAsTransactionId;
 
-    @JsonProperty("amount")
-    String amount;
+    String workflowId;
 
-    @JsonProperty("currency")
-    private String currency;
-
-    @JsonProperty("externalId")
-    private String externalId;
+    @Override
+    public String toString() {
+        return "{" + "payer:" + payer + ", payee:" + payee + ", amount:" + amount + ", useWorkflowIdAsTransactionId:"
+                + useWorkflowIdAsTransactionId + ", workflowId:" + workflowId + "}";
+    }
 }
