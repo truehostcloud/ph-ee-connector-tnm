@@ -6,7 +6,6 @@ import static org.mifos.connector.tnm.camel.config.CamelProperties.BUSINESS_SHOR
 import static org.mifos.connector.tnm.camel.config.CamelProperties.CHANNEL_REQUEST;
 import static org.mifos.connector.tnm.camel.config.CamelProperties.CHANNEL_URL;
 import static org.mifos.connector.tnm.camel.config.CamelProperties.CLIENT_ACCOUNT_NUMBER;
-import static org.mifos.connector.tnm.camel.config.CamelProperties.CLIENT_CORRELATION_ID;
 import static org.mifos.connector.tnm.camel.config.CamelProperties.CLIENT_NAME;
 import static org.mifos.connector.tnm.camel.config.CamelProperties.CONTENT_TYPE;
 import static org.mifos.connector.tnm.camel.config.CamelProperties.CONTENT_TYPE_VAL;
@@ -16,6 +15,7 @@ import static org.mifos.connector.tnm.camel.config.CamelProperties.SECONDARY_IDE
 import static org.mifos.connector.tnm.camel.config.CamelProperties.TENANT_ID;
 import static org.mifos.connector.tnm.camel.config.CamelProperties.TNM_PAYBILL_WORKFLOW_SUBTYPE;
 import static org.mifos.connector.tnm.camel.config.CamelProperties.TNM_PAYBILL_WORKFLOW_TYPE;
+import static org.mifos.connector.tnm.camel.config.CamelProperties.X_CORRELATION_ID;
 import static org.mifos.connector.tnm.util.TnmUtils.buildPayBillValidationResponse;
 import static org.mifos.connector.tnm.util.TnmUtils.generateWorkflowId;
 import static org.mifos.connector.tnm.util.TnmUtils.getPrimaryIdentifierName;
@@ -154,7 +154,7 @@ public class PayBillRouteProcessor {
         e.getIn().setHeader(ACCOUNT_HOLDING_INSTITUTION_ID, validationResponseDto.getAccountHoldingInstitutionId());
         e.getIn().setHeader(AMS_NAME, validationResponseDto.getAmsName());
         e.getIn().setHeader(TENANT_ID, validationResponseDto.getAccountHoldingInstitutionId());
-        e.getIn().setHeader(CLIENT_CORRELATION_ID, clientCorrelationId);
+        e.getIn().setHeader(X_CORRELATION_ID, clientCorrelationId);
         e.getIn().setHeader(CONTENT_TYPE, CONTENT_TYPE_VAL);
         e.getIn().setHeader(CLIENT_NAME, validationResponseDto.getClientName());
 
@@ -217,18 +217,20 @@ public class PayBillRouteProcessor {
         String workflowInstanceKey = workflowInstanceStore.get(oafTransactionReference);
 
         variables.put(IS_VALIDATION_REFERENCE_PRESENT, isReconciled && workflowInstanceKey != null);
-        variables.put(TRANSACTION_ID, oafTransactionReference);
+        variables.put(TRANSACTION_ID, tnmTransactionId);
+        variables.put("clientCorrelationId", oafTransactionReference);
         variables.put(TRANSFER_CREATE_FAILED, false);
         log.info("Workflow transaction id : {}", workflowInstanceKey);
 
         if (workflowInstanceKey != null) {
-            zeebeClient.newPublishMessageCommand().messageName("pendingPayRequest").correlationKey(workflowInstanceKey)
-                    .timeToLive(Duration.ofMillis(300)).variables(variables).send();
+            zeebeClient.newPublishMessageCommand().messageName("pendingPayRequest")
+                    .correlationKey(oafTransactionReference).timeToLive(Duration.ofMillis(300)).variables(variables)
+                    .send();
             log.debug("Published Variables");
         } else {
             log.debug("No workflow of such transaction ID exists");
             workflowInstanceKey = generateWorkflowId();
-            variables.put(ZeebeVariables.TRANSACTION_ID, workflowInstanceKey);
+            variables.put("clientCorrelationId", workflowInstanceKey);
             variables.put(ZeebeVariables.ORIGIN_DATE, Instant.now().toEpochMilli());
             variables.put(CamelProperties.TNM_PAY_REQUEST_PAY_WAIT_PERIOD,
                     getTnmPayRequestPayWaitPeriod(zeebeProperties.getWaitTnmPayRequestPeriod()));
@@ -277,7 +279,7 @@ public class PayBillRouteProcessor {
         String workflowInstanceKey = channelResponse.getString("transactionId");
 
         // Retrieving client correlation ID added to the header in --- route
-        String clientCorrelationId = e.getIn().getHeader(CLIENT_CORRELATION_ID).toString();
+        String clientCorrelationId = e.getIn().getHeader(X_CORRELATION_ID).toString();
         Object clientName = e.getIn().getHeader(CLIENT_NAME);
         Boolean reconciled = reconciledStore.get(clientCorrelationId);
         // Storing the key value

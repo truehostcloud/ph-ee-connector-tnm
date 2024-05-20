@@ -92,7 +92,7 @@ services:
       - zeebe_network
 
   channel-connector:
-    image: oaftech.azurecr.io/oneacrefund/channel-connector:1.1.1-mifos-1.5.3
+    image: oaftech.azurecr.io/oneacrefund/channel-connector:1.1.3-mifos-1.5.4.2024.05.20.1
     ports:
       - "8082:8080"
       - "5002:5000"
