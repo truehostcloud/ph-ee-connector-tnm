@@ -22,7 +22,7 @@ public class CamelProperties {
     public static final String SECONDARY_IDENTIFIER_NAME = "MSISDN";
     public static final String GET_ACCOUNT_DETAILS_FLAG = "getAccountDetails";
     public static final String CUSTOM_HEADER_FILTER_STRATEGY = "customHeaderFilterStrategy";
-    public static final String CLIENT_CORRELATION_ID = "X-CorrelationID";
+    public static final String X_CORRELATION_ID = "X-CorrelationID";
     public static final String ACCOUNT_HOLDING_INSTITUTION_ID = "accountHoldingInstitutionId";
     public static final String AMS_NAME = "amsName";
     public static final String TENANT_ID = "Platform-TenantId";

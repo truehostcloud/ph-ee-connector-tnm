@@ -92,7 +92,7 @@ services:
       - zeebe_network
 
   channel-connector:
-    image: oaftech.azurecr.io/oneacrefund/channel-connector:1.1.1-mifos-1.5.3
+    image: oaftech.azurecr.io/oneacrefund/channel-connector:1.1.3-mifos-1.5.4.2024.05.20.1
     ports:
       - "8082:8080"
       - "5002:5000"
@@ -167,9 +167,12 @@ services:
       DATASOURCE_CORE_PASSWORD: mysql
       DATASOURCE_CORE_SCHEMA: tenants
       KAFKA_BROKERS: "http://kafka:9092"
-      BPMN_PROCESSES_0__ID: "inbound_tnm_fineract"
+      BPMN_PROCESSES_0__ID: "inbound_tnm_roster"
       BPMN_PROCESSES_0__DIRECTION: "$${bpmn.incoming-direction}"
       BPMN_PROCESSES_0__TYPE: "$${bpmn.transfer-type}"
+      BPMN_PROCESSES_1__ID: "inbound_tnm_fineract"
+      BPMN_PROCESSES_1__DIRECTION: "$${bpmn.incoming-direction}"
+      BPMN_PROCESSES_1__TYPE: "$${bpmn.transfer-type}"
     ports:
       - "5007:3306"
     depends_on:
