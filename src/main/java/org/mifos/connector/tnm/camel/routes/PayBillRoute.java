@@ -57,7 +57,7 @@ public class PayBillRoute extends ErrorHandlerRouteBuilder {
                 .json(JsonLibrary.Jackson, TransactionStatusResponseDTO.class).choice()
                 .when(header(CAMEL_HTTP_RESPONSE_CODE).isEqualTo("200"))
                 .to("direct:paybill-transaction-status-response-success").otherwise()
-                .to("direct:paybill-pay-response-failure").end();
+                .to("direct:paybill-transaction-status-response-failure").end();
 
         from("direct:account-status").id("account-status-route")
                 .log(LoggingLevel.INFO, "## PayBill Validation Payload request")
