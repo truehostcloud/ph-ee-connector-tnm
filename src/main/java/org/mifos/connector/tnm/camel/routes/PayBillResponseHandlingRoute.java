@@ -1,12 +1,19 @@
 package org.mifos.connector.tnm.camel.routes;
 
+import static org.mifos.connector.tnm.camel.config.CamelProperties.TNM_PAY_OAF_TRANSACTION_REFERENCE;
+import static org.mifos.connector.tnm.util.TnmConstant.PAYMENT_SUCCESSFUL_MESSAGE;
 import static org.mifos.connector.tnm.util.TnmUtils.buildPayBillTransactionResponseResponse;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.camel.LoggingLevel;
 import org.mifos.connector.common.camel.ErrorHandlerRouteBuilder;
 import org.mifos.connector.common.channel.dto.TransactionStatusResponseDTO;
+import org.mifos.connector.tnm.dto.PayBillPayResponse;
+import org.mifos.connector.tnm.util.TnmUtils;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 
 /**
@@ -18,6 +25,7 @@ import org.springframework.stereotype.Component;
 public class PayBillResponseHandlingRoute extends ErrorHandlerRouteBuilder {
 
     private final PayBillRouteProcessor payBillRouteProcessor;
+    private ObjectMapper objectMapper = TnmUtils.getObjectMapper();
 
     @Override
     public void configure() {
@@ -47,6 +55,16 @@ public class PayBillResponseHandlingRoute extends ErrorHandlerRouteBuilder {
                             .getBody(TransactionStatusResponseDTO.class);
 
                     e.getIn().setBody(buildPayBillTransactionResponseResponse(false, channelResponse).toString());
+                });
+
+        from("direct:paybill-pay-response-success").id("paybill-pay-response-success")
+                .log(LoggingLevel.INFO, "## Paybill Pay request success response route").process(e -> {
+                    Object oafTransactionReferenceObj = e.getIn().getHeader(TNM_PAY_OAF_TRANSACTION_REFERENCE);
+                    String oafTransactionRef = Objects.nonNull(oafTransactionReferenceObj)
+                            ? oafTransactionReferenceObj.toString()
+                            : "";
+                    e.getIn().setBody(objectMapper.writeValueAsString(new PayBillPayResponse(HttpStatus.OK.value(),
+                            PAYMENT_SUCCESSFUL_MESSAGE, oafTransactionRef)));
                 });
 
     }

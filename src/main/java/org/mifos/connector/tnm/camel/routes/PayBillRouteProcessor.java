@@ -15,6 +15,8 @@ import static org.mifos.connector.tnm.camel.config.CamelProperties.SECONDARY_IDE
 import static org.mifos.connector.tnm.camel.config.CamelProperties.TENANT_ID;
 import static org.mifos.connector.tnm.camel.config.CamelProperties.TNM_PAYBILL_WORKFLOW_SUBTYPE;
 import static org.mifos.connector.tnm.camel.config.CamelProperties.TNM_PAYBILL_WORKFLOW_TYPE;
+import static org.mifos.connector.tnm.camel.config.CamelProperties.TNM_PAY_OAF_TRANSACTION_REFERENCE;
+import static org.mifos.connector.tnm.camel.config.CamelProperties.TNM_TRX_ID;
 import static org.mifos.connector.tnm.camel.config.CamelProperties.X_CORRELATION_ID;
 import static org.mifos.connector.tnm.util.TnmUtils.buildPayBillValidationResponse;
 import static org.mifos.connector.tnm.util.TnmUtils.generateWorkflowId;
@@ -189,7 +191,7 @@ public class PayBillRouteProcessor {
         final String amsUrl = amsProperties.getBaseUrl();
 
         Boolean isReconciled = Objects.nonNull(requestDto.getOafValidationRef());
-        final String oafTransactionReference = requestDto.getOafValidationRef();
+        String oafTransactionReference = requestDto.getOafValidationRef();
         requestDto.setValidationReferencePresent(isReconciled);
         requestDto.setAmsName(amsProperties.getAms());
 
@@ -230,7 +232,9 @@ public class PayBillRouteProcessor {
         } else {
             log.debug("No workflow of such transaction ID exists");
             workflowInstanceKey = generateWorkflowId();
+            oafTransactionReference = workflowInstanceKey;
             variables.put("clientCorrelationId", workflowInstanceKey);
+            variables.putIfAbsent(TNM_TRX_ID, oafTransactionReference);
             variables.put(ZeebeVariables.ORIGIN_DATE, Instant.now().toEpochMilli());
             variables.put(CamelProperties.TNM_PAY_REQUEST_PAY_WAIT_PERIOD,
                     getTnmPayRequestPayWaitPeriod(zeebeProperties.getWaitTnmPayRequestPeriod()));
@@ -241,6 +245,7 @@ public class PayBillRouteProcessor {
             zeebeClient.newPublishMessageCommand().messageName("pendingPayRequest").correlationKey(workflowInstanceKey)
                     .timeToLive(Duration.ofMillis(300)).variables(variables).send();
         }
+        e.getIn().setHeader(TNM_PAY_OAF_TRANSACTION_REFERENCE, oafTransactionReference);
     }
 
     /**

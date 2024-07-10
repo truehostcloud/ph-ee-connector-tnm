@@ -4,7 +4,11 @@ import static org.mifos.connector.tnm.camel.config.CamelProperties.BRIDGE_ENDPOI
 import static org.mifos.connector.tnm.camel.config.CamelProperties.CAMEL_HTTP_RESPONSE_CODE;
 import static org.mifos.connector.tnm.camel.config.CamelProperties.CHANNEL_URL_PROPERTY_IN_HEADER;
 import static org.mifos.connector.tnm.camel.config.CamelProperties.CUSTOM_HEADER_FILTER_STRATEGY;
+import static org.mifos.connector.tnm.util.TnmConstant.JSON_PARSE_EXCEPTION_CLIENT_MESSAGE;
+import static org.mifos.connector.tnm.util.TnmConstant.THIRD_PARTY_SYSTEM_UNACCESSIBLE_MESSAGE;
 
+import com.fasterxml.jackson.core.JsonParseException;
+import io.camunda.zeebe.client.api.command.ClientException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.camel.Exchange;
@@ -53,7 +57,7 @@ public class PayBillRoute extends ErrorHandlerRouteBuilder {
                 .json(JsonLibrary.Jackson, TransactionStatusResponseDTO.class).choice()
                 .when(header(CAMEL_HTTP_RESPONSE_CODE).isEqualTo("200"))
                 .to("direct:paybill-transaction-status-response-success").otherwise()
-                .to("direct:paybill-transaction-status-response-failure").end();
+                .to("direct:paybill-pay-response-failure").end();
 
         from("direct:account-status").id("account-status-route")
                 .log(LoggingLevel.INFO, "## PayBill Validation Payload request")
@@ -76,8 +80,8 @@ public class PayBillRoute extends ErrorHandlerRouteBuilder {
         from("direct:paybill-pay-route").id("paybill-pay-route")
                 .log(LoggingLevel.INFO, "Starting Tnm PayBill Pay route").unmarshal()
                 .json(JsonLibrary.Jackson, TnmPayBillPayRequestDto.class)
-                .process(payBillRouteProcessor::processRequestForPayBillPayRoute).onException(Exception.class)
-                .log(LoggingLevel.ERROR, "Error: ${exception.message}").end();
+                .process(payBillRouteProcessor::processRequestForPayBillPayRoute)
+                .to("direct:paybill-pay-response-success").end();
 
         from("direct:paybill-transaction-status-check-base").id("paybill-transaction-status-check-base")
                 .log(LoggingLevel.INFO, "## PayBill Transaction status request")
@@ -94,11 +98,17 @@ public class PayBillRoute extends ErrorHandlerRouteBuilder {
                     Exception exception = exchange.getProperty(Exchange.EXCEPTION_CAUGHT, Exception.class);
                     PayBillErrorResponse errorResponse = new PayBillErrorResponse();
                     errorResponse.setMessage(exception.getMessage());
-                    exchange.getIn().setBody(errorResponse);
                     HttpStatus httpStatus = HttpStatus.INTERNAL_SERVER_ERROR;
                     if (exception instanceof TnmConnectorException tnmConnectorException) {
                         httpStatus = tnmConnectorException.getHttpStatus();
+                    } else if (exception instanceof JsonParseException) {
+                        errorResponse.setMessage(JSON_PARSE_EXCEPTION_CLIENT_MESSAGE);
+                    } else if (exception instanceof ClientException) {
+                        errorResponse.setMessage(THIRD_PARTY_SYSTEM_UNACCESSIBLE_MESSAGE);
+                        httpStatus = HttpStatus.SERVICE_UNAVAILABLE;
                     }
+                    errorResponse.setStatus(httpStatus.value());
+                    exchange.getIn().setBody(errorResponse);
                     exchange.getIn().setHeader(Exchange.HTTP_RESPONSE_CODE, httpStatus.value());
                 }).marshal().json(JsonLibrary.Jackson);
     }

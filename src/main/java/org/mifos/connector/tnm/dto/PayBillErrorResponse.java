@@ -15,5 +15,6 @@ public class PayBillErrorResponse implements Serializable {
 
     private String code;
     private String message;
+    private Integer status;
 
 }
