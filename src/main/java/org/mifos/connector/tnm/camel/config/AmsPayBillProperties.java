@@ -30,8 +30,7 @@ public class AmsPayBillProperties {
      * @return the AMS properties
      */
     public AmsProperties getAmsPropertiesFromShortCode(String businessShortCode) {
-        return getGroups().stream().filter(p -> p.getBusinessShortCode().equalsIgnoreCase(businessShortCode))
-                .findFirst().get();
+        return getGroups().stream().filter(p -> p.getBusinessShortCode().equalsIgnoreCase(businessShortCode)).findFirst().get();
     }
 
 }

@@ -99,7 +99,7 @@ allprojects {
         lineEndings 'UNIX'
     }
 
-    compileJava.dependsOn spotlessCheck
+    compileJava.dependsOn spotlessApply
 }
 tasks.named('test') {
     useJUnitPlatform()

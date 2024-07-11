@@ -129,7 +129,7 @@ services:
       - zeebe_network
 
   roster-ams:
-    image: oaftech.azurecr.io/oneacrefund/ph-ee-connector-ams-pesa:1.0.1-mifos-1.3.1.2024.05.10.2
+    image: oaftech.azurecr.io/oneacrefund/ph-ee-connector-ams-pesa:1.0.1-mifos-1.3.1.2024.05.15.6
     ports:
       - "8083:8080"
       - "5003:5000"
@@ -141,6 +141,12 @@ services:
       LOGGING_PATTERN_CONSOLE: "%d{dd-MM-yyyy HH:mm:ss.SSS} %magenta([%thread]) %highlight(%-5level) %logger.%M - %msg%n"
       PESACORE_AUTH-HEADER:
       PESACORE_BASE-URL : https://opswebsitetest.oaftemp.org
+      PESACORE_COUNTRIES_0__COUNTRY-ID: 454
+      PESACORE_COUNTRIES_0__CURRENCY: MWK
+      PESACORE_COUNTRIES_1__COUNTRY-ID: 404
+      PESACORE_COUNTRIES_1__CURRENCY: KES
+      PESACORE_COUNTRIES_2__COUNTRY-ID: 646
+      PESACORE_COUNTRIES_2__CURRENCY: RWF
     depends_on:
       zeebe:
         condition: service_healthy
@@ -181,7 +187,7 @@ services:
       - zeebe_network
 
   operations-app:
-    image: oaf--ph-ee-operations-app-operations-app:latest
+    image: oaftech.azurecr.io/oneacrefund/operations-app:v1.0.2
     ports:
       - 5006:5000
     environment:

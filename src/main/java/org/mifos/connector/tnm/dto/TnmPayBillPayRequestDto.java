@@ -67,10 +67,10 @@ public class TnmPayBillPayRequestDto {
 
     @Override
     public String toString() {
-        return "PayBillRequestDTO{" + "transactionType='" + transactionType + '\'' + ", transactionID='" + transactionId
-                + '\'' + ", transactionAmount='" + transactionAmount + '\'' + ", shortCode='" + shortCode + '\''
-                + ", billRefNo='" + billRefNo + '\'' + ", invoiceNumber='" + invoiceNumber + '\'' + ", accountBalance='"
-                + accountBalance + '\'' + ", thirdPatrytransactionID='" + thirdPartyTransactionId + '\'' + ", msisdn='"
-                + msisdn + '\'' + ", firstname='" + firstname + '\'' + '}';
+        return "PayBillRequestDTO{" + "transactionType='" + transactionType + '\'' + ", transactionID='" + transactionId + '\''
+                + ", transactionAmount='" + transactionAmount + '\'' + ", shortCode='" + shortCode + '\'' + ", billRefNo='" + billRefNo
+                + '\'' + ", invoiceNumber='" + invoiceNumber + '\'' + ", accountBalance='" + accountBalance + '\''
+                + ", thirdPatrytransactionID='" + thirdPartyTransactionId + '\'' + ", msisdn='" + msisdn + '\'' + ", firstname='"
+                + firstname + '\'' + '}';
     }
 }

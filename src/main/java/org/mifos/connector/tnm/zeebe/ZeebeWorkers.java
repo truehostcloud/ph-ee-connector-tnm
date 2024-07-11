@@ -5,11 +5,13 @@ import static org.mifos.connector.tnm.camel.routes.PayBillRouteProcessor.workflo
 
 import io.camunda.zeebe.client.ZeebeClient;
 import java.util.Map;
+import java.util.Objects;
 import javax.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+import org.springframework.util.CollectionUtils;
 
 /**
  * Contains workers that will run based on the BPMN flow.
@@ -30,9 +32,15 @@ public class ZeebeWorkers {
         zeebeClient.newWorker().jobType("delete-tnm-workflow-instancekey").handler(((client, job) -> {
             log.info("Removing Workflow Instance key and Tnm Txn Id from store");
             Map<String, Object> variables = job.getVariablesAsMap();
-            String tnmTxnId = variables.get(TNM_TRX_ID).toString();
-            log.debug("Txn Id Removed :{}", tnmTxnId);
-            workflowInstanceStore.remove(tnmTxnId);
+            if (!CollectionUtils.isEmpty(variables)) {
+                Object tnmTxnIdObj = variables.get(TNM_TRX_ID);
+                if (Objects.nonNull(tnmTxnIdObj)) {
+                    String tnmTxnId = tnmTxnIdObj.toString();
+                    log.debug("Txn Id Removed :{}", tnmTxnId);
+                    workflowInstanceStore.remove(tnmTxnId);
+                }
+
+            }
             client.newCompleteCommand(job.getKey()).send().join();
         })).name("Cleanup").maxJobsActive(workerMaxJobs).open();
     }
