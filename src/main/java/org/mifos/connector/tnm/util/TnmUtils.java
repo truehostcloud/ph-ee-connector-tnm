@@ -68,8 +68,8 @@ public class TnmUtils {
      *            the currency
      * @return {@link ChannelValidationRequestDto}
      */
-    public static ChannelValidationRequestDto createValidationRequest(String accountId, String amsName, String currency,
-            String phoneNumber, boolean getAccountDetailsFlag) {
+    public static ChannelValidationRequestDto createValidationRequest(String accountId, String amsName, String currency, String phoneNumber,
+            boolean getAccountDetailsFlag) {
 
         // Mapping primary and secondary Identifier
         CustomData primaryIdentifier = new CustomData();
@@ -111,8 +111,8 @@ public class TnmUtils {
      *            the correlation id
      * @return {@link ChannelValidationRequestDto}
      */
-    public static GsmaTransfer createGsmaTransferDto(PayBillValidationResponseDto paybillValidationResponseDto,
-            String clientCorrelationId, int tnmpayRequestWaitPeriod) {
+    public static GsmaTransfer createGsmaTransferDto(PayBillValidationResponseDto paybillValidationResponseDto, String clientCorrelationId,
+            int tnmpayRequestWaitPeriod) {
 
         Party payer = new Party();
         payer.setPartyIdIdentifier(paybillValidationResponseDto.getMsisdn());
@@ -127,8 +127,7 @@ public class TnmUtils {
         payeeObj.add(payee);
 
         GsmaTransfer gsmaTransfer = new GsmaTransfer();
-        List<CustomData> customData = setCustomData(paybillValidationResponseDto, clientCorrelationId,
-                tnmpayRequestWaitPeriod);
+        List<CustomData> customData = setCustomData(paybillValidationResponseDto, clientCorrelationId, tnmpayRequestWaitPeriod);
         SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSXXX");
 
         String currentDateTime = formatter.format(new Date());
@@ -158,8 +157,8 @@ public class TnmUtils {
      *            the wait period for the TNM pay request
      * @return a list of {@link CustomData}
      */
-    private static List<CustomData> setCustomData(PayBillValidationResponseDto payBillValidationResponseDto,
-            String clientCorrelationId, int tnmpayRequestWaitPeriod) {
+    private static List<CustomData> setCustomData(PayBillValidationResponseDto payBillValidationResponseDto, String clientCorrelationId,
+            int tnmpayRequestWaitPeriod) {
         CustomData reconciled = new CustomData();
         reconciled.setKey(PARTY_LOOKUP_FAILED);
         reconciled.setValue(!payBillValidationResponseDto.isReconciled());
@@ -210,8 +209,8 @@ public class TnmUtils {
      *            the currency
      * @return {@link ChannelRequestDto}
      */
-    public static ChannelRequestDto convertPayBillToChannelPayload(
-            TnmPayBillPayRequestDto payBillConfirmationRequestDto, String amsName, String currency) {
+    public static ChannelRequestDto convertPayBillToChannelPayload(TnmPayBillPayRequestDto payBillConfirmationRequestDto, String amsName,
+            String currency) {
         JSONObject payer = new JSONObject();
 
         JSONObject partyIdInfoPayer = new JSONObject();
@@ -248,8 +247,7 @@ public class TnmUtils {
      *            the account holding institution ID
      * @return the workflow identifier
      */
-    public static String getWorkflowId(String type, String subtype, String amsName,
-            String accountHoldingInstitutionId) {
+    public static String getWorkflowId(String type, String subtype, String amsName, String accountHoldingInstitutionId) {
         return new StringBuilder().append(subtype).append("_").append(type).append("_").append(amsName).append("-")
                 .append(accountHoldingInstitutionId).toString();
 
@@ -275,13 +273,11 @@ public class TnmUtils {
      *            the client name
      * @return the PayBill validation response
      */
-    public static JSONObject buildPayBillValidationResponse(Boolean reconciled, String transactionId,
-            String clientName) {
+    public static JSONObject buildPayBillValidationResponse(Boolean reconciled, String transactionId, String clientName) {
         JSONObject responseObject = new JSONObject();
         boolean isReconciled = Boolean.TRUE.equals(reconciled);
         responseObject.put("status", isReconciled ? 200 : 404);
-        responseObject.put("message",
-                isReconciled ? "Account exists" : "Account does not exists or payment not allowed");
+        responseObject.put("message", isReconciled ? "Account exists" : "Account does not exists or payment not allowed");
         responseObject.put("oafTransactionReference", transactionId);
         if (isReconciled) {
             responseObject.put("clientName", clientName);

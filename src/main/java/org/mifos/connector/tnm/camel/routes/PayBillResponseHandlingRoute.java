@@ -43,16 +43,14 @@ public class PayBillResponseHandlingRoute extends ErrorHandlerRouteBuilder {
         from("direct:paybill-transaction-status-response-success").id("paybill-transaction-status-response-success")
                 .log(LoggingLevel.INFO, "## Paybill Transaction status success response route").process(e -> {
 
-                    TransactionStatusResponseDTO channelResponse = e.getIn()
-                            .getBody(TransactionStatusResponseDTO.class);
+                    TransactionStatusResponseDTO channelResponse = e.getIn().getBody(TransactionStatusResponseDTO.class);
                     e.getIn().setBody(buildPayBillTransactionResponseResponse(true, channelResponse).toString());
 
                 });
 
         from("direct:paybill-transaction-status-response-failure").id("paybill-transaction-status-response-failure")
                 .log(LoggingLevel.INFO, "## Paybill Transaction status failure response route").process(e -> {
-                    TransactionStatusResponseDTO channelResponse = e.getIn()
-                            .getBody(TransactionStatusResponseDTO.class);
+                    TransactionStatusResponseDTO channelResponse = e.getIn().getBody(TransactionStatusResponseDTO.class);
 
                     e.getIn().setBody(buildPayBillTransactionResponseResponse(false, channelResponse).toString());
                 });
@@ -60,11 +58,9 @@ public class PayBillResponseHandlingRoute extends ErrorHandlerRouteBuilder {
         from("direct:paybill-pay-response-success").id("paybill-pay-response-success")
                 .log(LoggingLevel.INFO, "## Paybill Pay request success response route").process(e -> {
                     Object oafTransactionReferenceObj = e.getIn().getHeader(TNM_PAY_OAF_TRANSACTION_REFERENCE);
-                    String oafTransactionRef = Objects.nonNull(oafTransactionReferenceObj)
-                            ? oafTransactionReferenceObj.toString()
-                            : "";
-                    e.getIn().setBody(objectMapper.writeValueAsString(new PayBillPayResponse(HttpStatus.OK.value(),
-                            PAYMENT_SUCCESSFUL_MESSAGE, oafTransactionRef)));
+                    String oafTransactionRef = Objects.nonNull(oafTransactionReferenceObj) ? oafTransactionReferenceObj.toString() : "";
+                    e.getIn().setBody(objectMapper.writeValueAsString(
+                            new PayBillPayResponse(HttpStatus.OK.value(), PAYMENT_SUCCESSFUL_MESSAGE, oafTransactionRef)));
                 });
 
     }

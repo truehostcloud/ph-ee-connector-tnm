@@ -96,19 +96,16 @@ public class PayBillRouteProcessor {
         final Object shortCodeFromReq = exchange.getIn().getHeader(BUSINESS_SHORT_CODE);
         final Object msisdn = exchange.getIn().getHeader(SECONDARY_IDENTIFIER_NAME);
         final Object getAccountDetails = exchange.getIn().getHeader(GET_ACCOUNT_DETAILS_FLAG);
-        final boolean getAccountDetailsFlag = !Objects.nonNull(getAccountDetails)
-                || Boolean.parseBoolean(getAccountDetails.toString());
+        final boolean getAccountDetailsFlag = !Objects.nonNull(getAccountDetails) || Boolean.parseBoolean(getAccountDetails.toString());
 
         if (Objects.isNull(msisdn)) {
             throw new MissingFieldException("MSISDN is required for PayBill validation");
         }
 
-        AmsProperties amsProperties = amsPayBillProps
-                .getAmsPropertiesFromShortCode(Objects.nonNull(shortCodeFromReq) ? shortCodeFromReq.toString()
-                        : amsPayBillProps.getDefaultAmsShortCode());
+        AmsProperties amsProperties = amsPayBillProps.getAmsPropertiesFromShortCode(
+                Objects.nonNull(shortCodeFromReq) ? shortCodeFromReq.toString() : amsPayBillProps.getDefaultAmsShortCode());
         final String amsName = amsProperties.getAms();
-        final String currency = Objects.nonNull(currencyFromHeaders) ? currencyFromHeaders.toString()
-                : amsProperties.getCurrency();
+        final String currency = Objects.nonNull(currencyFromHeaders) ? currencyFromHeaders.toString() : amsProperties.getCurrency();
         exchange.getIn().removeHeaders("*");
         exchange.getIn().setHeader("amsUrl", amsProperties.getBaseUrl());
         exchange.getIn().setHeader(CONTENT_TYPE, CONTENT_TYPE_VAL);
@@ -119,8 +116,8 @@ public class PayBillRouteProcessor {
         exchange.setProperty("primaryIdentifierValue", clientAccountNumber);
         exchange.setProperty("secondaryIdentifier", SECONDARY_IDENTIFIER_NAME);
         exchange.setProperty("secondaryIdentifierValue", msisdn);
-        ChannelValidationRequestDto obj = TnmUtils.createValidationRequest(clientAccountNumber, amsName, currency,
-                msisdn.toString(), getAccountDetailsFlag);
+        ChannelValidationRequestDto obj = TnmUtils.createValidationRequest(clientAccountNumber, amsName, currency, msisdn.toString(),
+                getAccountDetailsFlag);
         log.debug("Header:{}", exchange.getIn().getHeaders());
         try {
             return objectMapper.writeValueAsString(obj);
@@ -182,16 +179,13 @@ public class PayBillRouteProcessor {
         final Object currencyFromHeaders = e.getIn().getHeader(CURRENCY);
         final Object shortCodeFromReq = e.getIn().getHeader(BUSINESS_SHORT_CODE);
 
-        AmsProperties amsProperties = amsPayBillProps
-                .getAmsPropertiesFromShortCode(Objects.nonNull(shortCodeFromReq) ? shortCodeFromReq.toString()
-                        : amsPayBillProps.getDefaultAmsShortCode());
+        AmsProperties amsProperties = amsPayBillProps.getAmsPropertiesFromShortCode(
+                Objects.nonNull(shortCodeFromReq) ? shortCodeFromReq.toString() : amsPayBillProps.getDefaultAmsShortCode());
         final String amsName = amsProperties.getAms();
-        final String currency = Objects.nonNull(currencyFromHeaders) ? currencyFromHeaders.toString()
-                : amsProperties.getCurrency();
+        final String currency = Objects.nonNull(currencyFromHeaders) ? currencyFromHeaders.toString() : amsProperties.getCurrency();
         final String amsUrl = amsProperties.getBaseUrl();
 
         Boolean isReconciled = Objects.nonNull(requestDto.getOafValidationRef());
-        String oafTransactionReference = requestDto.getOafValidationRef();
         requestDto.setValidationReferencePresent(isReconciled);
         requestDto.setAmsName(amsProperties.getAms());
 
@@ -201,6 +195,8 @@ public class PayBillRouteProcessor {
 
         ChannelRequestDto channelRequestDto = TnmUtils.convertPayBillToChannelPayload(requestDto, amsName, currency);
         channelRequestDto.setUseWorkflowIdAsTransactionId(true);
+
+        String oafTransactionReference = requestDto.getOafValidationRef();
         channelRequestDto.setWorkflowId(oafTransactionReference);
 
         Map<String, Object> variables = new HashMap<>();
@@ -208,8 +204,7 @@ public class PayBillRouteProcessor {
         variables.put(CHANNEL_REQUEST, channelRequestDto.toString());
         variables.put("amount", requestDto.getTransactionAmount());
         variables.put("accountId", requestDto.getAccountNumber());
-        variables.put("originDate",
-                Long.parseLong(LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"))));
+        variables.put("originDate", Long.parseLong(LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"))));
         variables.put("phoneNumber", requestDto.getMsisdn());
         String tnmTransactionId = requestDto.getTransactionId();
         variables.put(SERVER_TRANSACTION_ID, tnmTransactionId);
@@ -225,9 +220,8 @@ public class PayBillRouteProcessor {
         log.info("Workflow transaction id : {}", workflowInstanceKey);
 
         if (workflowInstanceKey != null) {
-            zeebeClient.newPublishMessageCommand().messageName("pendingPayRequest")
-                    .correlationKey(oafTransactionReference).timeToLive(Duration.ofMillis(300)).variables(variables)
-                    .send();
+            zeebeClient.newPublishMessageCommand().messageName("pendingPayRequest").correlationKey(oafTransactionReference)
+                    .timeToLive(Duration.ofMillis(300)).variables(variables).send();
             log.debug("Published Variables");
         } else {
             log.debug("No workflow of such transaction ID exists");
@@ -238,10 +232,8 @@ public class PayBillRouteProcessor {
             variables.put(ZeebeVariables.ORIGIN_DATE, Instant.now().toEpochMilli());
             variables.put(CamelProperties.TNM_PAY_REQUEST_PAY_WAIT_PERIOD,
                     getTnmPayRequestPayWaitPeriod(zeebeProperties.getWaitTnmPayRequestPeriod()));
-            zeebeClient.newCreateInstanceCommand()
-                    .bpmnProcessId(getWorkflowId(TNM_PAYBILL_WORKFLOW_TYPE, TNM_PAYBILL_WORKFLOW_SUBTYPE, amsName,
-                            amsPayBillProps.getAccountHoldingInstitutionId()))
-                    .latestVersion().variables(variables).send().join();
+            zeebeClient.newCreateInstanceCommand().bpmnProcessId(getWorkflowId(TNM_PAYBILL_WORKFLOW_TYPE, TNM_PAYBILL_WORKFLOW_SUBTYPE,
+                    amsName, amsPayBillProps.getAccountHoldingInstitutionId())).latestVersion().variables(variables).send().join();
             zeebeClient.newPublishMessageCommand().messageName("pendingPayRequest").correlationKey(workflowInstanceKey)
                     .timeToLive(Duration.ofMillis(300)).variables(variables).send();
         }
@@ -291,8 +283,9 @@ public class PayBillRouteProcessor {
         workflowInstanceStore.put(clientCorrelationId, workflowInstanceKey);
         reconciledStore.remove(clientCorrelationId);
 
-        e.getIn().setBody(buildPayBillValidationResponse(reconciled, clientCorrelationId,
-                Objects.nonNull(clientName) ? clientName.toString() : null).toString());
+        e.getIn().setBody(
+                buildPayBillValidationResponse(reconciled, clientCorrelationId, Objects.nonNull(clientName) ? clientName.toString() : null)
+                        .toString());
     }
 
     /**
