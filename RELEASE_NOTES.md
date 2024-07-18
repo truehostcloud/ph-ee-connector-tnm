@@ -1,5 +1,8 @@
 Release Notes
 
+## OAF version 1.0.4
+        * [SER-2890] - Refactor pay endpoint to check if provided transaction id is unique in the system
+        * [SER-2890] - Refactor transaction status endpoint to return OAF reference as receipt number in the  response
 ## OAF version 1.0.3
         * [SER-2890] - Add response body to the pay endpoint
 

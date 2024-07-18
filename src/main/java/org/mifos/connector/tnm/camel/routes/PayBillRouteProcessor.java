@@ -11,6 +11,7 @@ import static org.mifos.connector.tnm.camel.config.CamelProperties.CONTENT_TYPE;
 import static org.mifos.connector.tnm.camel.config.CamelProperties.CONTENT_TYPE_VAL;
 import static org.mifos.connector.tnm.camel.config.CamelProperties.GET_ACCOUNT_DETAILS_FLAG;
 import static org.mifos.connector.tnm.camel.config.CamelProperties.PAYBILL_TRANSACTION_ID_URL_PARAM;
+import static org.mifos.connector.tnm.camel.config.CamelProperties.PAYBILL_TRANSFER_CODE;
 import static org.mifos.connector.tnm.camel.config.CamelProperties.SECONDARY_IDENTIFIER_NAME;
 import static org.mifos.connector.tnm.camel.config.CamelProperties.TENANT_ID;
 import static org.mifos.connector.tnm.camel.config.CamelProperties.TNM_PAYBILL_WORKFLOW_SUBTYPE;
@@ -43,8 +44,11 @@ import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.camel.Exchange;
+import org.apache.camel.ProducerTemplate;
 import org.json.JSONObject;
+import org.mifos.connector.common.channel.dto.TransactionStatusResponseDTO;
 import org.mifos.connector.common.gsma.dto.GsmaTransfer;
+import org.mifos.connector.common.mojaloop.type.TransferState;
 import org.mifos.connector.tnm.camel.config.AmsPayBillProperties;
 import org.mifos.connector.tnm.camel.config.AmsProperties;
 import org.mifos.connector.tnm.camel.config.CamelProperties;
@@ -54,6 +58,7 @@ import org.mifos.connector.tnm.dto.ChannelValidationRequestDto;
 import org.mifos.connector.tnm.dto.PayBillValidationResponseDto;
 import org.mifos.connector.tnm.dto.TnmPayBillPayRequestDto;
 import org.mifos.connector.tnm.exception.MissingFieldException;
+import org.mifos.connector.tnm.exception.TnmConnectorExistingTransactionIdException;
 import org.mifos.connector.tnm.exception.TnmConnectorJsonProcessingException;
 import org.mifos.connector.tnm.util.TnmUtils;
 import org.mifos.connector.tnm.zeebe.ZeebeVariables;
@@ -70,6 +75,7 @@ import org.springframework.util.StringUtils;
 @RequiredArgsConstructor
 public class PayBillRouteProcessor {
 
+    private final ProducerTemplate producerTemplate;
     private final ZeebeClient zeebeClient;
     private final AmsPayBillProperties amsPayBillProps;
 
@@ -146,20 +152,21 @@ public class PayBillRouteProcessor {
         String clientCorrelationId = validationTransactionId;
         reconciledStore.put(clientCorrelationId, isReconciled);
 
-        GsmaTransfer gsmaTransfer = TnmUtils.createGsmaTransferDto(validationResponseDto, clientCorrelationId,
-                zeebeProperties.getWaitTnmPayRequestPeriod());
-
-        e.getIn().removeHeaders("*");
-        e.getIn().setHeader(ACCOUNT_HOLDING_INSTITUTION_ID, validationResponseDto.getAccountHoldingInstitutionId());
-        e.getIn().setHeader(AMS_NAME, validationResponseDto.getAmsName());
-        e.getIn().setHeader(TENANT_ID, validationResponseDto.getAccountHoldingInstitutionId());
-        e.getIn().setHeader(X_CORRELATION_ID, clientCorrelationId);
-        e.getIn().setHeader(CONTENT_TYPE, CONTENT_TYPE_VAL);
-        e.getIn().setHeader(CLIENT_NAME, validationResponseDto.getClientName());
-
-        e.setProperty("isValidationReferencePresent", isReconciled);
-        e.setProperty("channelUrl", channelUrl);
         try {
+            GsmaTransfer gsmaTransfer = TnmUtils.createGsmaTransferDto(validationResponseDto, clientCorrelationId,
+                    zeebeProperties.getWaitTnmPayRequestPeriod());
+
+            e.getIn().removeHeaders("*");
+            e.getIn().setHeader(ACCOUNT_HOLDING_INSTITUTION_ID, validationResponseDto.getAccountHoldingInstitutionId());
+            e.getIn().setHeader(AMS_NAME, validationResponseDto.getAmsName());
+            e.getIn().setHeader(TENANT_ID, validationResponseDto.getAccountHoldingInstitutionId());
+            e.getIn().setHeader(X_CORRELATION_ID, clientCorrelationId);
+            e.getIn().setHeader(CONTENT_TYPE, CONTENT_TYPE_VAL);
+            e.getIn().setHeader(CLIENT_NAME, validationResponseDto.getClientName());
+
+            e.setProperty("isValidationReferencePresent", isReconciled);
+            e.setProperty("channelUrl", channelUrl);
+
             return objectMapper.writeValueAsString(gsmaTransfer);
         } catch (JsonProcessingException ex) {
             throw new TnmConnectorJsonProcessingException(ex.getMessage(), ex);
@@ -192,6 +199,12 @@ public class PayBillRouteProcessor {
         e.setProperty("amsUrl", amsUrl);
         e.setProperty("secondaryIdentifier", "MSISDN");
         e.setProperty("secondaryIdentifierValue", requestDto.getMsisdn());
+        try {
+
+            validateUniqueTransactionId(requestDto.getTransactionId());
+        } catch (JsonProcessingException ex) {
+            throw new TnmConnectorJsonProcessingException(ex.getMessage(), ex);
+        }
 
         ChannelRequestDto channelRequestDto = TnmUtils.convertPayBillToChannelPayload(requestDto, amsName, currency);
         channelRequestDto.setUseWorkflowIdAsTransactionId(true);
@@ -229,6 +242,7 @@ public class PayBillRouteProcessor {
             oafTransactionReference = workflowInstanceKey;
             variables.put("clientCorrelationId", workflowInstanceKey);
             variables.putIfAbsent(TNM_TRX_ID, oafTransactionReference);
+            variables.putIfAbsent(PAYBILL_TRANSFER_CODE, oafTransactionReference);
             variables.put(ZeebeVariables.ORIGIN_DATE, Instant.now().toEpochMilli());
             variables.put(CamelProperties.TNM_PAY_REQUEST_PAY_WAIT_PERIOD,
                     getTnmPayRequestPayWaitPeriod(zeebeProperties.getWaitTnmPayRequestPeriod()));
@@ -238,6 +252,20 @@ public class PayBillRouteProcessor {
                     .timeToLive(Duration.ofMillis(300)).variables(variables).send();
         }
         e.getIn().setHeader(TNM_PAY_OAF_TRANSACTION_REFERENCE, oafTransactionReference);
+    }
+
+    public void validateUniqueTransactionId(String transactionId) throws JsonProcessingException {
+        log.info("Checking transaction status for transactionId: {}", transactionId);
+        Exchange exchange = producerTemplate.send("direct:paybill-transaction-status-check-base", ex -> {
+            ex.getIn().setHeader(PAYBILL_TRANSACTION_ID_URL_PARAM, transactionId);
+        });
+        String responseBody = exchange.getIn().getBody(String.class);
+        if (!Objects.isNull(responseBody)) {
+            TransactionStatusResponseDTO response = objectMapper.readValue(responseBody, TransactionStatusResponseDTO.class);
+            if (TransferState.COMMITTED.equals(response.getTransferState())) {
+                throw new TnmConnectorExistingTransactionIdException("Transaction ID already exists");
+            }
+        }
     }
 
     /**

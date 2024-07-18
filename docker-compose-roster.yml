@@ -97,8 +97,18 @@ services:
       - "8082:8080"
       - "5002:5000"
     environment:
-      AMS_GROUPS_0__IDENTIFIER: FINERACTACCOUNTID
-      AMS_GROUPS_0__VALUE: fineract
+      SPRING_PROFILES_ACTIVE: bb
+      AMS_GROUPS_0__IDENTIFIER: ACCOUNTID
+      AMS_GROUPS_0__VALUE: roster
+      AMS_GROUPS_1__IDENTIFIER: FOUNDATIONALID
+      AMS_GROUPS_1__VALUE: paygops
+      AMS_GROUPS_2__IDENTIFIER: TUPANDEACCOUNTID
+      AMS_GROUPS_2__VALUE: tupande
+      AMS_GROUPS_3__IDENTIFIER: WALLETID
+      AMS_GROUPS_3__VALUE: erply
+      AMS_GROUPS_4__IDENTIFIER: FINERACTACCOUNTID
+      AMS_GROUPS_4__VALUE: fineract
+      CHANNEL_TENANTPRIMARY_TENANT : oaf
       DFSPIDS: oaf,oafrw,rw-oaf
       LOGGING_LEVEL_ROOT: INFO
       LOGGING_PATTERN_CONSOLE: "%d{dd-MM-yyyy HH:mm:ss.SSS} %magenta([%thread]) %highlight(%-5level) %logger.%M - %msg%n"
@@ -106,6 +116,7 @@ services:
       MPESA_NOTIFICATION_SUCCESS_ENABLED: false
       ZEEBE_BROKER_CONTACTPOINT: zeebe:26500
       BPMN_FLOW_MOMO-FLOW: "momo_flow_{ams}-{dfspid}"
+      OPERATIONS_URL: "http://host.docker.internal:5006/api/v1"
     depends_on:
       zeebe:
         condition: service_healthy
