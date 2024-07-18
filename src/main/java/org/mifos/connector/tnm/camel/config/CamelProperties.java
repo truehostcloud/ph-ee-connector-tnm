@@ -36,4 +36,6 @@ public class CamelProperties {
     public static final String TNM_TRX_ID = "tnmTrxId";
     public static final String TNM_PAY_REQUEST_PAY_WAIT_PERIOD = "tnmPayRequestWaitPeriod";
     public static final String TNM_PAY_OAF_TRANSACTION_REFERENCE = "oafTransactionReference";
+    public static final String TNM_VALIDATION_REQUEST_PAYLOAD = "validationRequest";
+    public static final String PAYBILL_TRANSFER_CODE = "transferCode";
 }

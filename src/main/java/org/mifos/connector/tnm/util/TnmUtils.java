@@ -2,14 +2,17 @@ package org.mifos.connector.tnm.util;
 
 import static org.mifos.connector.tnm.camel.config.CamelProperties.FINERACT_PRIMARY_IDENTIFIER_NAME;
 import static org.mifos.connector.tnm.camel.config.CamelProperties.GET_ACCOUNT_DETAILS_FLAG;
+import static org.mifos.connector.tnm.camel.config.CamelProperties.PAYBILL_TRANSFER_CODE;
 import static org.mifos.connector.tnm.camel.config.CamelProperties.ROSTER_PRIMARY_IDENTIFIER_NAME;
 import static org.mifos.connector.tnm.camel.config.CamelProperties.SECONDARY_IDENTIFIER_NAME;
 import static org.mifos.connector.tnm.camel.config.CamelProperties.TNM_PAY_REQUEST_PAY_WAIT_PERIOD;
 import static org.mifos.connector.tnm.camel.config.CamelProperties.TNM_TRX_ID;
+import static org.mifos.connector.tnm.camel.config.CamelProperties.TNM_VALIDATION_REQUEST_PAYLOAD;
 import static org.mifos.connector.tnm.zeebe.ZeebeVariables.CURRENCY;
 import static org.mifos.connector.tnm.zeebe.ZeebeVariables.PARTY_LOOKUP_FAILED;
 import static org.mifos.connector.tnm.zeebe.ZeebeVariables.TRANSACTION_ID;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
@@ -112,7 +115,7 @@ public class TnmUtils {
      * @return {@link ChannelValidationRequestDto}
      */
     public static GsmaTransfer createGsmaTransferDto(PayBillValidationResponseDto paybillValidationResponseDto, String clientCorrelationId,
-            int tnmpayRequestWaitPeriod) {
+            int tnmpayRequestWaitPeriod) throws JsonProcessingException {
 
         Party payer = new Party();
         payer.setPartyIdIdentifier(paybillValidationResponseDto.getMsisdn());
@@ -158,7 +161,7 @@ public class TnmUtils {
      * @return a list of {@link CustomData}
      */
     private static List<CustomData> setCustomData(PayBillValidationResponseDto payBillValidationResponseDto, String clientCorrelationId,
-            int tnmpayRequestWaitPeriod) {
+            int tnmpayRequestWaitPeriod) throws JsonProcessingException {
         CustomData reconciled = new CustomData();
         reconciled.setKey(PARTY_LOOKUP_FAILED);
         reconciled.setValue(!payBillValidationResponseDto.isReconciled());
@@ -186,15 +189,25 @@ public class TnmUtils {
         tmmPayRequestWaitPeriod.setKey(TNM_PAY_REQUEST_PAY_WAIT_PERIOD);
         tmmPayRequestWaitPeriod.setValue(getTnmPayRequestPayWaitPeriod(tnmpayRequestWaitPeriod));
 
+        CustomData validationPayload = new CustomData();
+        validationPayload.setKey(TNM_VALIDATION_REQUEST_PAYLOAD);
+        validationPayload.setValue(getObjectMapper().writeValueAsString(payBillValidationResponseDto));
+
+        CustomData transferCode = new CustomData();
+        transferCode.setKey(PAYBILL_TRANSFER_CODE);
+        transferCode.setValue(payBillValidationResponseDto.getTransactionId());
+
         List<CustomData> customData = new ArrayList<>();
         customData.add(reconciled);
         customData.add(confirmationReceived);
         customData.add(txnId);
+        customData.add(transferCode);
         customData.add(ams);
         customData.add(tenantId);
         customData.add(clientCorrelation);
         customData.add(currency);
         customData.add(tmmPayRequestWaitPeriod);
+        customData.add(validationPayload);
         return customData;
     }
 
@@ -305,7 +318,8 @@ public class TnmUtils {
                 status = 200;
                 message = "Payment successful";
             }
-            responseObject.put("receipt_number", responseDto.getTransactionId());
+            responseObject.put("receipt_number", responseDto.getTransferId());
+            responseObject.put("trans_id", responseDto.getTransactionId());
         }
 
         responseObject.put("status", status);
