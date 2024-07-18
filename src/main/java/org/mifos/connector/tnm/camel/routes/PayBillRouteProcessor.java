@@ -153,8 +153,6 @@ public class PayBillRouteProcessor {
         reconciledStore.put(clientCorrelationId, isReconciled);
 
         try {
-            GsmaTransfer gsmaTransfer = TnmUtils.createGsmaTransferDto(validationResponseDto, clientCorrelationId,
-                    zeebeProperties.getWaitTnmPayRequestPeriod());
 
             e.getIn().removeHeaders("*");
             e.getIn().setHeader(ACCOUNT_HOLDING_INSTITUTION_ID, validationResponseDto.getAccountHoldingInstitutionId());
@@ -166,6 +164,9 @@ public class PayBillRouteProcessor {
 
             e.setProperty("isValidationReferencePresent", isReconciled);
             e.setProperty("channelUrl", channelUrl);
+
+            GsmaTransfer gsmaTransfer = TnmUtils.createGsmaTransferDto(validationResponseDto, clientCorrelationId,
+                    zeebeProperties.getWaitTnmPayRequestPeriod());
 
             return objectMapper.writeValueAsString(gsmaTransfer);
         } catch (JsonProcessingException ex) {
@@ -254,11 +255,18 @@ public class PayBillRouteProcessor {
         e.getIn().setHeader(TNM_PAY_OAF_TRANSACTION_REFERENCE, oafTransactionReference);
     }
 
+    /**
+     * Validate the unique transaction ID.
+     *
+     * @param transactionId
+     *            the transaction ID
+     * @throws JsonProcessingException
+     *             if there is an error processing JSON
+     */
     public void validateUniqueTransactionId(String transactionId) throws JsonProcessingException {
         log.info("Checking transaction status for transactionId: {}", transactionId);
-        Exchange exchange = producerTemplate.send("direct:paybill-transaction-status-check-base", ex -> {
-            ex.getIn().setHeader(PAYBILL_TRANSACTION_ID_URL_PARAM, transactionId);
-        });
+        Exchange exchange = producerTemplate.send("direct:paybill-transaction-status-check-base",
+                ex -> ex.getIn().setHeader(PAYBILL_TRANSACTION_ID_URL_PARAM, transactionId));
         String responseBody = exchange.getIn().getBody(String.class);
         if (!Objects.isNull(responseBody)) {
             TransactionStatusResponseDTO response = objectMapper.readValue(responseBody, TransactionStatusResponseDTO.class);
